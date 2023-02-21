@@ -22,12 +22,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive { namespace reader {
-    // Haiqi TODO: remove this once supporting GLT decompression and search
-    Archive::Archive() {
-        m_metadata_db = std::make_unique<streaming_archive::clp::CLPMetadataDB>();
-    }
-
+namespace streaming_archive::reader {
     void Archive::open (const string& path) {
         // Determine whether path is file or directory
         struct stat path_stat = {};
