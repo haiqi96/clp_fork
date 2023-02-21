@@ -183,6 +183,8 @@ set(SOURCE_FILES_clp
         src/clp/FileCompressor.hpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
+        src/clp/GLTFileDecompressor.cpp
+        src/clp/GLTFileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
@@ -290,16 +292,34 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/CLP/CLPArchive.cpp
         src/streaming_archive/reader/CLP/CLPArchive.hpp
+        src/streaming_archive/reader/GLT/GLTArchive.cpp
+        src/streaming_archive/reader/GLT/GLTArchive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/CLP/CLPFile.cpp
         src/streaming_archive/reader/CLP/CLPFile.hpp
+        src/streaming_archive/reader/GLT/GLTFile.cpp
+        src/streaming_archive/reader/GLT/GLTFile.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
+        src/streaming_archive/reader/GLT/GLTMessage.cpp
+        src/streaming_archive/reader/GLT/GLTMessage.hpp
         src/streaming_archive/reader/Segment.cpp
         src/streaming_archive/reader/Segment.hpp
+        src/streaming_archive/reader/GLT/GLTSegment.cpp
+        src/streaming_archive/reader/GLT/GLTSegment.hpp
         src/streaming_archive/reader/SegmentManager.cpp
         src/streaming_archive/reader/SegmentManager.hpp
+        src/streaming_archive/reader/GLT/LogtypeTable.cpp
+        src/streaming_archive/reader/GLT/LogtypeTable.hpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.cpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.hpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/CLP/CLPArchive.cpp
@@ -931,7 +951,8 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
-        )
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp src/streaming_archive/reader/GLT/LogtypeTableManager.cpp src/streaming_archive/reader/GLT/LogtypeTableManager.hpp src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp src/clp/GLTFileDecompressor.cpp src/clp/GLTFileDecompressor.hpp src/streaming_archive/reader/GLT/LogtypeTable.cpp src/streaming_archive/reader/GLT/LogtypeTable.hpp src/streaming_archive/reader/GLT/LogtypeMetadata.cpp src/streaming_archive/reader/GLT/LogtypeMetadata.hpp src/streaming_archive/reader/GLT/GLTMessage.cpp src/streaming_archive/reader/GLT/GLTMessage.hpp src/streaming_archive/reader/GLT/GLTSegment.cpp src/streaming_archive/reader/GLT/GLTSegment.hpp src/streaming_archive/reader/GLT/GLTArchive.cpp src/streaming_archive/reader/GLT/GLTArchive.hpp src/streaming_archive/reader/GLT/GLTFile.cpp src/streaming_archive/reader/GLT/GLTFile.hpp)
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_include_directories(unitTest
         PRIVATE

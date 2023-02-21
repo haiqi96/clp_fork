@@ -43,6 +43,17 @@ namespace streaming_compression { namespace zstd {
 
         // Methods implementing the ReaderInterface
         /**
+         * Tries to read exactly "num_bytes" bytes of data
+         * from the decompressor
+         * @throw ErrorCode_Failure if fails to read required number of bytes
+         * @throw error code of zstd::Decompressor::try_read on failure
+         * @param buf
+         * @param num_bytes The number of bytes to try and read
+         * @return void
+         */
+        void exact_read(char* buf, size_t num_bytes_to_read);
+
+        /**
          * Tries to read up to a given number of bytes from the decompressor
          * @param buf
          * @param num_bytes_to_read The number of bytes to try and read
