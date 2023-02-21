@@ -3,7 +3,22 @@
 // C++ standard libraries
 #include <cstring>
 
+// spdlog
+#include <spdlog/spdlog.h>
+
 namespace streaming_compression { namespace passthrough {
+
+    void Decompressor::exact_read (char* buf, size_t num_bytes_to_read) {
+        size_t num_bytes_read;
+        auto errorcode = try_read(buf, num_bytes_to_read, num_bytes_read);
+        if(num_bytes_read != num_bytes_to_read) {
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+        if(errorcode != ErrorCode_Success) {
+            throw OperationFailed(errorcode, __FILENAME__, __LINE__);
+        }
+    }
+
     ErrorCode Decompressor::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
         if (InputType::NotInitialized == m_input_type) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);

@@ -24,7 +24,7 @@ namespace streaming_archive::reader {
 
         void clear_vars ();
 
-    private:
+    protected:
         friend class Archive;
 
         // Variables

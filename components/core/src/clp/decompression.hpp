@@ -16,6 +16,14 @@ namespace clp {
      * @return true if decompression was successful, false otherwise
      */
     bool clp_decompress (CommandLineArguments& command_line_args, const std::unordered_set<std::string>& files_to_decompress);
+
+    /**
+     * Decompresses an glt archive into the given directory
+     * @param command_line_args
+     * @param files_to_decompress
+     * @return true if decompression was successful, false otherwise
+     */
+    bool glt_decompress (CommandLineArguments& command_line_args, const std::unordered_set<std::string>& files_to_decompress);
 }
 
 #endif // CLP_DECOMPRESSION_HPP
