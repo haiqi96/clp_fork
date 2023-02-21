@@ -30,6 +30,8 @@ using std::vector;
 using streaming_archive::MetadataDB;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
+using streaming_archive::reader::clp::CLPArchive;
+using streaming_archive::reader::clp::CLPFile;
 using streaming_archive::reader::Message;
 
 /**
@@ -54,7 +56,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
  * @param compressed_file
  * @return true on success, false otherwise
  */
-static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Archive& archive, File& compressed_file);
+static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, CLPArchive& archive, CLPFile& compressed_file);
 /**
  * Searches all files referenced by a given database cursor
  * @param queries
@@ -63,8 +65,8 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
  * @param file_metadata_ix
  * @return The total number of matches found across all files
  */
-static size_t search_files (vector<Query>& queries, CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix);
+static size_t search_clp_files (vector<Query>& queries, CommandLineArguments::OutputMethod output_method, CLPArchive& archive,
+                                MetadataDB::FileIterator& file_metadata_ix);
 /**
  * Prints search result to stdout in text format
  * @param orig_file_path
@@ -135,8 +137,9 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
     return true;
 }
 
-static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
-                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
+
+static bool search_clp_archive (const vector<string>& search_strings, const CommandLineArguments& command_line_args, CLPArchive& archive,
+                                compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -148,9 +151,9 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
         bool is_superseding_query = false;
         for (const auto& search_string : search_strings) {
             Query query;
-            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer, 
+            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer,
                                         reverse_lexer, use_heuristic)) {
-            //if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, parser)) {
+                //if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, parser)) {
                 no_queries_match = false;
 
                 if (query.contains_sub_queries() == false) {
@@ -178,14 +181,14 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
             size_t num_matches;
             if (is_superseding_query) {
                 auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path());
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
+                num_matches = search_clp_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
             } else {
                 auto file_metadata_ix_ptr = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                num_matches = search_clp_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
                 for (auto segment_id : ids_of_segments_to_search) {
                     file_metadata_ix.set_segment_id(segment_id);
-                    num_matches += search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                    num_matches += search_clp_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
                 }
             }
             SPDLOG_DEBUG("# matches found: {}", num_matches);
@@ -204,7 +207,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
     return true;
 }
 
-static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Archive& archive, File& compressed_file) {
+static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, CLPArchive& archive, CLPFile& compressed_file) {
     ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
     if (ErrorCode_Success == error_code) {
         return true;
@@ -221,12 +224,12 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
     return false;
 }
 
-static size_t search_files (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix)
+static size_t search_clp_files (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, CLPArchive& archive,
+                                MetadataDB::FileIterator& file_metadata_ix)
 {
     size_t num_matches = 0;
 
-    File compressed_file;
+    CLPFile compressed_file;
     // Setup output method
     Grep::OutputFunc output_func;
     void* output_func_arg;
@@ -317,6 +320,99 @@ static void print_result_binary (const string& orig_file_path, const Message& co
     }
 }
 
+static void generater_lexer(const std::filesystem::path& schema_file_path,
+                            std::map<std::string, compressor_frontend::lexers::ByteLexer>& forward_lexer_map,
+                            std::map<std::string, compressor_frontend::lexers::ByteLexer>& reverse_lexer_map,
+                            compressor_frontend::lexers::ByteLexer& one_time_use_forward_lexer,
+                            compressor_frontend::lexers::ByteLexer& one_time_use_reverse_lexer,
+                            compressor_frontend::lexers::ByteLexer*& forward_lexer_ptr,
+                            compressor_frontend::lexers::ByteLexer*& reverse_lexer_ptr) {
+
+    const uint32_t max_map_schema_length = 100000;
+    char buf[max_map_schema_length];
+    FileReader file_reader;
+    file_reader.try_open(schema_file_path);
+
+    size_t num_bytes_read;
+    file_reader.read (buf, max_map_schema_length, num_bytes_read);
+    if(num_bytes_read < max_map_schema_length) {
+        auto forward_lexer_map_it = forward_lexer_map.find(buf);
+        auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
+        // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
+        if (forward_lexer_map_it == forward_lexer_map.end()) {
+            // Create forward lexer
+            auto insert_result = forward_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
+            forward_lexer_ptr = &insert_result.first->second;
+            load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+
+            // Create reverse lexer
+            insert_result = reverse_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
+            reverse_lexer_ptr = &insert_result.first->second;
+            load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+        } else {
+            // load the lexers if they already exist
+            forward_lexer_ptr = &forward_lexer_map_it->second;
+            reverse_lexer_ptr = &reverse_lexer_map_it->second;
+        }
+    } else {
+        // Create forward lexer
+        forward_lexer_ptr = &one_time_use_forward_lexer;
+        load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
+
+        // Create reverse lexer
+        reverse_lexer_ptr = &one_time_use_reverse_lexer;
+        load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
+    }
+}
+
+static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, const CommandLineArguments& command_line_args,
+                      const std::filesystem::path& archives_dir, const std::vector<string>& search_strings) {
+    /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
+    compressor_frontend::lexers::ByteLexer one_time_use_forward_lexer;
+    compressor_frontend::lexers::ByteLexer one_time_use_reverse_lexer;
+    compressor_frontend::lexers::ByteLexer* forward_lexer_ptr;
+    compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
+
+    string archive_id;
+    CLPArchive archive_reader;
+    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db_ptr, command_line_args.get_file_path()));
+         archive_ix->contains_element(); archive_ix->get_next())
+    {
+        archive_ix->get_id(archive_id);
+        auto archive_path = archives_dir / archive_id;
+
+        if (false == std::filesystem::exists(archive_path)) {
+            SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
+            continue;
+        }
+
+        // Open archive
+        if (!open_archive(archive_path.string(), archive_reader)) {
+            return -1;
+        }
+
+        // Generate lexer if schema file exists
+        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+        bool use_heuristic = true;
+        if (std::filesystem::exists(schema_file_path)) {
+            use_heuristic = false;
+            generater_lexer(schema_file_path, forward_lexer_map, reverse_lexer_map,
+                            one_time_use_forward_lexer, one_time_use_reverse_lexer,
+                            forward_lexer_ptr, reverse_lexer_ptr);
+        }
+
+        // Perform search
+        if (!search_clp_archive(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
+            return -1;
+        }
+        archive_reader.close();
+    }
+
+    return 0;
+}
+
 int main (int argc, const char* argv[]) {
     // Program-wide initialization
     try {
@@ -372,15 +468,15 @@ int main (int argc, const char* argv[]) {
     }
 
     const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
+    std::shared_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
             auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
-            global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+            global_metadata_db = std::make_shared<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(global_metadata_db_config.get_metadata_db_host(),
+            global_metadata_db = std::make_shared<GlobalMySQLMetadataDB>(global_metadata_db_config.get_metadata_db_host(),
                                                                          global_metadata_db_config.get_metadata_db_port(),
                                                                          global_metadata_db_config.get_metadata_db_username(),
                                                                          global_metadata_db_config.get_metadata_db_password(),
@@ -389,81 +485,8 @@ int main (int argc, const char* argv[]) {
             break;
     }
     global_metadata_db->open();
-
-    /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
-    const uint32_t max_map_schema_length = 100000;
-    std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
-    std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
-    compressor_frontend::lexers::ByteLexer one_time_use_forward_lexer;
-    compressor_frontend::lexers::ByteLexer one_time_use_reverse_lexer;
-    compressor_frontend::lexers::ByteLexer* forward_lexer_ptr;
-    compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
-
-    string archive_id;
-    Archive archive_reader;
-    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path(), command_line_args.get_search_begin_ts(), command_line_args.get_search_end_ts()));
-            archive_ix->contains_element(); archive_ix->get_next())
-    {
-        archive_ix->get_id(archive_id);
-        auto archive_path = archives_dir / archive_id;
-
-        if (false == std::filesystem::exists(archive_path)) {
-            SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
-            continue;
-        }
-
-        // Open archive
-        if (!open_archive(archive_path.string(), archive_reader)) {
-            return -1;
-        }
-        
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
-        bool use_heuristic = true;
-        if (std::filesystem::exists(schema_file_path)) {
-            use_heuristic = false;
-
-            char buf[max_map_schema_length];
-            FileReader file_reader;
-            file_reader.try_open(schema_file_path);
-
-            size_t num_bytes_read;
-            file_reader.read (buf, max_map_schema_length, num_bytes_read);
-            if(num_bytes_read < max_map_schema_length) {
-                auto forward_lexer_map_it = forward_lexer_map.find(buf);
-                auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
-                // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
-                if (forward_lexer_map_it == forward_lexer_map.end()) {
-                    // Create forward lexer
-                    auto insert_result = forward_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
-                    forward_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
-
-                    // Create reverse lexer
-                    insert_result = reverse_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
-                    reverse_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
-                } else {
-                    // load the lexers if they already exist
-                    forward_lexer_ptr = &forward_lexer_map_it->second;
-                    reverse_lexer_ptr = &reverse_lexer_map_it->second;
-                }
-            } else {
-                // Create forward lexer
-                forward_lexer_ptr = &one_time_use_forward_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
-
-                // Create reverse lexer
-                reverse_lexer_ptr = &one_time_use_reverse_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
-            }
-        }
-
-        // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
-            return -1;
-        }
-        archive_reader.close();
+    if (search_clp(global_metadata_db, command_line_args, archives_dir, search_strings)) {
+        return -1;
     }
 
     global_metadata_db->close();

@@ -112,7 +112,7 @@ namespace clp {
             }
         } else { // CommandLineArguments::Command::Extract == command
             unordered_set<string> files_to_decompress(input_paths.cbegin(), input_paths.cend());
-            if (!decompress(command_line_args, files_to_decompress)) {
+            if (!clp_decompress(command_line_args, files_to_decompress)) {
                 return -1;
             }
         }

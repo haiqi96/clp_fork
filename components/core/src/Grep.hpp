@@ -7,8 +7,8 @@
 // Project headers
 #include "Defs.h"
 #include "Query.hpp"
-#include "streaming_archive/reader/Archive.hpp"
-#include "streaming_archive/reader/File.hpp"
+#include "streaming_archive/reader/CLP/CLPArchive.hpp"
+#include "streaming_archive/reader/CLP/CLPFile.hpp"
 #include "compressor_frontend/Lexer.hpp"
 
 class Grep {
@@ -82,10 +82,11 @@ public:
      * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search_and_output (const Query& query, size_t limit, streaming_archive::reader::Archive& archive,
-                                     streaming_archive::reader::File& compressed_file, OutputFunc output_func, void* output_func_arg);
-    static bool search_and_decompress (const Query& query, streaming_archive::reader::Archive& archive, streaming_archive::reader::File& compressed_file,
-            streaming_archive::reader::Message& compressed_msg, std::string& decompressed_msg);
+    static size_t search_and_output (const Query& query, size_t limit, streaming_archive::reader::clp::CLPArchive& archive,
+                                     streaming_archive::reader::clp::CLPFile& compressed_file, OutputFunc output_func, void* output_func_arg);
+    static bool search_and_decompress (const Query& query, streaming_archive::reader::clp::CLPArchive& archive,
+                                       streaming_archive::reader::clp::CLPFile& compressed_file, streaming_archive::reader::Message& compressed_msg,
+                                       std::string& decompressed_msg);
     /**
      * Searches a file with the given query without outputting the results
      * @param query
@@ -96,7 +97,7 @@ public:
      * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search (const Query& query, size_t limit, streaming_archive::reader::Archive& archive, streaming_archive::reader::File& compressed_file);
+    static size_t search (const Query& query, size_t limit, streaming_archive::reader::clp::CLPArchive& archive, streaming_archive::reader::clp::CLPFile& compressed_file);
 };
 
 #endif // GREP_HPP

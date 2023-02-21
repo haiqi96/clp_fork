@@ -131,10 +131,8 @@ namespace streaming_archive {
         }
         std::unique_ptr<EmptyDirectoryIterator> get_empty_directory_iterator () { return std::make_unique<EmptyDirectoryIterator>(m_db); }
 
-        SQLitePreparedStatement get_files_select_statement (SQLiteDB& db, epochtime_t ts_begin, epochtime_t ts_end, const std::string& file_path, bool in_specific_segment, segment_id_t segment_id);
-
     protected:
-        // Methods
+        // Methods to handle storage specific fields
         virtual size_t get_field_size() = 0;
         virtual void add_storage_specific_fields(std::vector<std::string>& field_names) = 0;
         virtual void bind_storage_specific_fields(writer::File*) = 0;
@@ -142,6 +140,7 @@ namespace streaming_archive {
         virtual void add_storage_specific_ordering(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
         virtual void create_storage_specific_index(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
 
+        SQLitePreparedStatement get_files_select_statement (SQLiteDB& db, epochtime_t ts_begin, epochtime_t ts_end, const std::string& file_path, bool in_specific_segment, segment_id_t segment_id);
         void create_tables (const std::vector<std::pair<std::string, std::string>>& file_field_names_and_types, SQLiteDB& db);
 
         // Types

@@ -8,7 +8,7 @@
 // Project headers
 #include "../../Defs.h"
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     class Message {
     public:
         // Methods
@@ -33,6 +33,6 @@ namespace streaming_archive { namespace reader {
         std::vector<encoded_variable_t> m_vars;
         epochtime_t m_timestamp;
     };
-} }
+}
 
 #endif // STREAMING_ARCHIVE_READER_MESSAGE_HPP
