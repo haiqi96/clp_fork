@@ -271,8 +271,12 @@ set(SOURCE_FILES_clp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/CLP/CLPArchive.cpp
+        src/streaming_archive/reader/CLP/CLPArchive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/CLP/CLPFile.cpp
+        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -439,8 +443,12 @@ set(SOURCE_FILES_clg
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/CLP/CLPArchive.cpp
+        src/streaming_archive/reader/CLP/CLPArchive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/CLP/CLPFile.cpp
+        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -586,8 +594,12 @@ set(SOURCE_FILES_clo
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/CLP/CLPArchive.cpp
+        src/streaming_archive/reader/CLP/CLPArchive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/CLP/CLPFile.cpp
+        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -790,8 +802,12 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/CLP/CLPArchive.cpp
+        src/streaming_archive/reader/CLP/CLPArchive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/CLP/CLPFile.cpp
+        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp

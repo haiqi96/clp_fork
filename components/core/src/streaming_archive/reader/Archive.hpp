@@ -9,6 +9,9 @@
 #include <string>
 #include <utility>
 
+// Boost libraries
+#include <boost/filesystem.hpp>
+
 // Project headers
 #include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
@@ -16,11 +19,10 @@
 #include "../../SQLiteDB.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../MetadataDB.hpp"
-#include "../CLPMetadataDB.hpp"
 #include "File.hpp"
 #include "Message.hpp"
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     class Archive {
     public:
         // Types
@@ -34,8 +36,6 @@ namespace streaming_archive { namespace reader {
                 return "streaming_archive::reader::Archive operation failed";
             }
         };
-        // Constructor
-        Archive();
 
         // Methods
         /**
@@ -55,6 +55,9 @@ namespace streaming_archive { namespace reader {
         void open (const std::string& path);
         void close ();
 
+        virtual void open_derived (const std::string& path) = 0;
+        virtual void close_derived () = 0;
+
         /**
          * Reads any new entries added to the dictionaries
          * @throw Same as LogTypeDictionary::read_from_file and VariableDictionary::read_from_file
@@ -62,37 +65,6 @@ namespace streaming_archive { namespace reader {
         void refresh_dictionaries ();
         const LogTypeDictionaryReader& get_logtype_dictionary () const;
         const VariableDictionaryReader& get_var_dictionary () const;
-
-        /**
-         * Opens file with given path
-         * @param file
-         * @param file_metadata_ix
-         * @return Same as streaming_archive::reader::File::open_me
-         */
-        ErrorCode open_file (File& file, MetadataDB::FileIterator& file_metadata_ix);
-        /**
-         * Wrapper for streaming_archive::reader::File::close_me
-         * @param file
-         */
-        void close_file (File& file);
-        /**
-         * Wrapper for streaming_archive::reader::File::reset_indices
-         * @param file
-         */
-        void reset_file_indices (File& file);
-
-        /**
-         * Wrapper for streaming_archive::reader::File::find_message_in_time_range
-         */
-        bool find_message_in_time_range (File& file, epochtime_t search_begin_timestamp, epochtime_t search_end_timestamp, Message& msg);
-        /**
-         * Wrapper for streaming_archive::reader::File::find_message_matching_query
-         */
-        const SubQuery* find_message_matching_query (File& file, const Query& query, Message& msg);
-        /**
-         * Wrapper for streaming_archive::reader::File::get_next_message
-         */
-        bool get_next_message (File& file, Message& msg);
 
         /**
          * Decompresses a given message from a given file
@@ -121,7 +93,7 @@ namespace streaming_archive { namespace reader {
             return m_metadata_db->get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
         }
 
-    private:
+    protected:
         // Variables
         std::string m_id;
         std::string m_path;
@@ -129,10 +101,8 @@ namespace streaming_archive { namespace reader {
         LogTypeDictionaryReader m_logtype_dictionary;
         VariableDictionaryReader m_var_dictionary;
 
-        SegmentManager m_segment_manager;
-
         std::unique_ptr<MetadataDB> m_metadata_db;
     };
-} }
+}
 
 #endif // STREAMING_ARCHIVE_READER_ARCHIVE_HPP

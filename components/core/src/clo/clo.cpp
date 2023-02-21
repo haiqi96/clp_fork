@@ -22,6 +22,7 @@
 #include "../Profiler.hpp"
 #include "../networking/socket_utils.hpp"
 #include "../streaming_archive/Constants.hpp"
+#include "../streaming_archive/reader/CLP/CLPArchive.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
@@ -38,6 +39,8 @@ using std::vector;
 using streaming_archive::MetadataDB;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
+using streaming_archive::reader::clp::CLPArchive;
+using streaming_archive::reader::clp::CLPFile;
 using streaming_archive::reader::Message;
 
 // Local types
@@ -76,8 +79,9 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
  */
-static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd);
+static SearchFilesResult search_clp_files (Query& query, CLPArchive& archive, MetadataDB::FileIterator& file_metadata_ix,
+                                           const std::atomic_bool& query_cancelled, int controller_socket_fd);
+
 /**
  * Searches an archive with the given path
  * @param command_line_args
@@ -86,8 +90,9 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
  * @param controller_socket_fd
  * @return true on success, false otherwise
  */
-static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd);
+static bool search_clp_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
+                                const std::atomic_bool& query_cancelled, int controller_socket_fd);
+
 
 static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
     // Get address info for controller
@@ -142,12 +147,12 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
-static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd)
+static SearchFilesResult search_clp_files (Query& query, CLPArchive& archive, MetadataDB::FileIterator& file_metadata_ix,
+                                           const std::atomic_bool& query_cancelled, int controller_socket_fd)
 {
     SearchFilesResult result = SearchFilesResult::Success;
 
-    File compressed_file;
+    CLPFile compressed_file;
     Message compressed_message;
     string decompressed_message;
 
@@ -188,8 +193,8 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
     return result;
 }
 
-static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
+static bool search_clp_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
+                                const std::atomic_bool& query_cancelled, int controller_socket_fd)
 {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -217,7 +222,7 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
         load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
     }
 
-    Archive archive_reader;
+    CLPArchive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
 
@@ -245,7 +250,7 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     auto& file_metadata_ix = *file_metadata_ix_ptr;
     for (auto segment_id : ids_of_segments_to_search) {
         file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, query_cancelled, controller_socket_fd);
+        auto result = search_clp_files(query, archive_reader, file_metadata_ix, query_cancelled, controller_socket_fd);
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
             break;
@@ -296,8 +301,8 @@ int main (int argc, const char* argv[]) {
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
-                                    controller_socket_fd))
+        if (false == search_clp_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
+                                        controller_socket_fd))
         {
             return_value = -1;
         }

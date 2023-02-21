@@ -15,7 +15,7 @@
 #include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../streaming_archive/reader/Archive.hpp"
+#include "../streaming_archive/reader/CLP/CLPArchive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
@@ -27,7 +27,7 @@ using std::unique_ptr;
 using std::unordered_set;
 
 namespace clp {
-    bool decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
+    bool clp_decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
         ErrorCode error_code;
 
         // Create output directory in case it doesn't exist
@@ -60,7 +60,7 @@ namespace clp {
                     break;
             }
 
-            streaming_archive::reader::Archive archive_reader;
+            streaming_archive::reader::clp::CLPArchive archive_reader;
 
             boost::filesystem::path empty_directory_path;
 
@@ -134,7 +134,7 @@ namespace clp {
                 }
             } else { // files_to_decompress.size() > 1
                 for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
-                        archive_ix->contains_element(); archive_ix->get_next())
+                     archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;

@@ -15,7 +15,7 @@
 #include "../../streaming_compression/zstd/Decompressor.hpp"
 #include "../Constants.hpp"
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     /**
      * Class for reading segments. A segment is a container for multiple compressed buffers that itself may be further compressed and stored on disk.
      */
@@ -64,6 +64,6 @@ namespace streaming_archive { namespace reader {
         static_assert(false, "Unsupported compression mode.");
 #endif
     };
-} }
+}
 
 #endif // STREAMING_ARCHIVE_READER_SEGMENT_HPP
