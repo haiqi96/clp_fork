@@ -21,7 +21,7 @@ using std::string;
 using std::to_string;
 using std::unique_ptr;
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     Segment::~Segment () {
         // If user forgot to explicitly close the file for some reason, close it again (doesn't hurt)
         close();
@@ -86,4 +86,4 @@ namespace streaming_archive { namespace reader {
         }
         return m_decompressor.get_decompressed_stream_region(decompressed_stream_pos, extraction_buf, extraction_len);
     }
-} }
+}

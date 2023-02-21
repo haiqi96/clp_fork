@@ -7,7 +7,7 @@
 // Project headers
 #include "../FileWriter.hpp"
 #include "../streaming_archive/MetadataDB.hpp"
-#include "../streaming_archive/reader/Archive.hpp"
+#include "../streaming_archive/reader/CLP/CLPArchive.hpp"
 #include "../streaming_archive/reader/File.hpp"
 #include "../streaming_archive/reader/Message.hpp"
 #include "IRDecompressor.hpp"
@@ -20,15 +20,16 @@ namespace clp {
     public:
         // Methods
         bool decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
-                              streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
+                               streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
         bool decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
-                               streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
+                               streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
                                std::unordered_map<std::string, epochtime_t>& file_to_last_ts);
         IRDecompressor m_ir_decompressor;
+
     private:
         // Variables
         FileWriter m_decompressed_file_writer;
-        streaming_archive::reader::File m_encoded_file;
+        streaming_archive::reader::clp::CLPFile m_encoded_file;
         streaming_archive::reader::Message m_encoded_message;
         std::string m_decompressed_message;
 

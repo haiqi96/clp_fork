@@ -12,7 +12,7 @@ using std::string;
 
 namespace clp {
     bool FileDecompressor::decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const string& output_dir,
-                                            streaming_archive::reader::Archive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
+                                            streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
     {
         // Open compressed file
         auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
@@ -71,9 +71,9 @@ namespace clp {
     }
 
 
-    bool FileDecompressor::decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const string& output_dir,
-                                             streaming_archive::reader::Archive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path,
-                                             std::unordered_map<string, epochtime_t>& file_to_last_ts)
+    bool FileDecompressor::decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
+                                             streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
+                                             std::unordered_map<std::string, epochtime_t>& file_to_last_ts)
     {
         // Open compressed file
         auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
