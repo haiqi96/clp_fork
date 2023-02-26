@@ -872,4 +872,30 @@ target_compile_features(unitTest
         PRIVATE cxx_std_17
         )
 
+set(SOURCE_FILES_ir_decoder
+    src/ir_decoder/ir_decoder.cpp
+    src/ir_decoder/CommandLineArguments.cpp
+    src/ir_decoder/CommandLineArguments.hpp
+    src/Profiler.cpp
+    src/Profiler.hpp
+    src/TimestampPattern.cpp
+    src/TimestampPattern.hpp
+    src/ir_decoder/Decoder.cpp src/ir_decoder/Decoder.hpp)
+add_executable(ir_decoder ${SOURCE_FILES_ir_decoder})
+target_link_libraries(ir_decoder
+        PRIVATE
+        Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
+        LibArchive::LibArchive
+        MariaDBClient::MariaDBClient
+        spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
+        ${STD_FS_LIBS}
+        yaml-cpp::yaml-cpp
+        ZStd::ZStd
+        )
+target_compile_features(ir_decoder
+        PRIVATE cxx_std_17
+        )
+
 include(cmake/utils.cmake)
