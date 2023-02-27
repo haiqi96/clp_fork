@@ -92,15 +92,18 @@ void EncodedMessageParser::parse_unencoded_vars(ReaderInterface &reader, Encoded
         length = read_unsigned(reader);
     }
     size_t read_length;
-    char * variable_buffer = new char [length+1];
-    auto error_code = reader.try_read(variable_buffer,length, read_length);
-    variable_buffer[length] = '\0';
-    std::string var_str(variable_buffer);
-    if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to read metadata");
+    std::vector<char> variable_buffer_vec(length);
+    auto error_code = reader.try_read(variable_buffer_vec.data(), length, read_length);
+    if(read_length != length) {
+        SPDLOG_ERROR("Failed to read exact length");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    message.append_unencoded_vars(variable_buffer);
+    if (ErrorCode_Success != error_code) {
+        SPDLOG_ERROR("Failed to read");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    std::string var_str(variable_buffer_vec.data(), length);
+    message.append_unencoded_vars(var_str);
     message.append_order(false);
 }
 
@@ -187,9 +190,9 @@ bool EncodedMessageParser::parse_next_compact_token(ReaderInterface &reader, Enc
         std::cout << "unexpected timestamp tag\n";
         exit(-1);
     }
-    epochtime_t timestamp = timestamp_delta_value + message.get_last_timestamp();
+    epochtime_t timestamp = timestamp_delta_value + m_last_timestamp;
     //std::cout << "Delta timestamp is " << timestamp_delta_value << ". last timestamp is " << message.get_last_timestamp() << ". final timestamp is " << timestamp << std::endl;
-    message.set_last_timestamp(timestamp);
+    m_last_timestamp = timestamp;
     //TODO: Remove this date hack. note this is different from standard encoding. Most probably due to winter time.
     message.set_time(timestamp);
     return true;
@@ -277,29 +280,28 @@ bool EncodedMessageParser::parse_metadata(ReaderInterface &reader, EncodedParsed
             printf("error\n");
     }
 
-    char * buffer = new char [metadata_length+1];
-    auto error_code = reader.try_read(buffer,metadata_length, read_length);
-    buffer[metadata_length] = '\0';
+    std::vector<char> buffer_vec(metadata_length);
+    auto error_code = reader.try_read(buffer_vec.data(), metadata_length, read_length);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to read metadata");
     }
-    auto j3 = nlohmann::json::parse(buffer);
-    // std::string time_stamp_string = j3.at("TIMESTAMP_PATTERN");
+    std::string buffer_str(buffer_vec.data(), metadata_length);
+    auto j3 = nlohmann::json::parse(buffer_str);
     // TODO: LET IT USE THE TRUE TIMESTAMP FORMAT
-    std::string time_stamp_string = "%y/%m/%d %H:%M:%S";
+    // std::string time_stamp_string = "%y/%m/%d %H:%M:%S";
+    std::string time_stamp_string = "%Y-%m-%dT%H:%M:%S.%3Z";
     std::string timezone_id = j3.at("TZ_ID");
     std::string encode_version = j3.at("VERSION");
     if(is_compact_encoding) {
         std::string reference_timestamp = j3.at("REFERENCE_TIMESTAMP");
-        epochtime_t reference_time = boost::lexical_cast<epochtime_t>(reference_timestamp);
-        message.set_reference_timestamp(reference_time);
+        epochtime_t reference_ts = boost::lexical_cast<epochtime_t>(reference_timestamp);
+        m_last_timestamp = reference_ts;
     } else {
-        message.set_reference_timestamp(0);
+        m_last_timestamp = 0;
     }
-    delete[] buffer;
-    message.set_timestamp(0, time_stamp_string);
-    message.set_timezone(timezone_id);
-    message.set_version(encode_version);
+    message.set_ts_pattern(0, time_stamp_string);
+    m_timezone = timezone_id;
+    m_version = encode_version;
     message.set_encoding_version(is_compact_encoding);
     return true;
 }

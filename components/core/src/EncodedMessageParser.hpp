@@ -47,7 +47,6 @@ public:
      */
     bool parse_metadata (ReaderInterface& reader, EncodedParsedMessage& message, bool is_compact_encoding);
 
-
     bool parse_next_std_token (ReaderInterface& reader, EncodedParsedMessage& message);
 
     bool parse_next_compact_token (ReaderInterface& reader, EncodedParsedMessage& message);
@@ -65,6 +64,12 @@ private:
     unsigned long long read_long (ReaderInterface &reader);
     void parse_unencoded_vars (ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
     void parse_log_message(ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
+
+    // variables
+    std::string m_timezone;
+    epochtime_t m_reference_timestamp;
+    epochtime_t m_last_timestamp;
+    std::string m_version;
 };
 
 #endif //CLP_ENCODEDMASSAGEPARSER_HPP

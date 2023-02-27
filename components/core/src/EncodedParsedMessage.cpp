@@ -8,25 +8,23 @@
 #include <spdlog/spdlog.h>
 #include "ffi/encoding_methods.hpp"
 
-void EncodedParsedMessage::set_timestamp(uint8_t num_spaces_before_ts, const std::string &format) {
+void EncodedParsedMessage::set_ts_pattern(uint8_t num_spaces_before_ts, const std::string &format) {
     if(m_ts_patt != nullptr) {
         SPDLOG_ERROR("Unexpected not nullptr");
     }
-    m_ts_patt = new TimestampPattern(num_spaces_before_ts, format);
+    m_ts_patt = std::make_unique<TimestampPattern>(num_spaces_before_ts, format);
 }
 
 // TODO: this might be an issue. because we first clear it and then initialize
 // may be use a variable to check if this is initialized
 void EncodedParsedMessage::clear() {
     if(m_ts_patt != nullptr) {
-        delete m_ts_patt;
-        m_ts_patt = nullptr;
+        m_ts_patt.reset();
     }
     m_unencoded_vars.clear();
     m_encoded_vars.clear();
     m_order.clear();
 }
-
 
 static void convert_compact_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value) {
     uint64_t encoded_double;
