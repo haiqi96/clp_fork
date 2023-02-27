@@ -8,8 +8,12 @@
 #include "../FileReader.hpp"
 #include "../EncodedMessageParser.hpp"
 #include "../EncodedParsedMessage.hpp"
+#include "../LibarchiveFileReader.hpp"
+#include "../LibarchiveReader.hpp"
+#include "../streaming_compression/zstd/Decompressor.hpp"
 
 namespace ir_decoder {
+    constexpr size_t cArchiveValidationBufCapacity = 4096;
     constexpr size_t cCLPMagicNumberBufCapacity = 4;
     class Decoder {
     public:
@@ -28,11 +32,18 @@ namespace ir_decoder {
          */
         void parse_and_decode (ReaderInterface& reader, bool is_compact_encoding);
 
+        bool try_compressing_as_archive(std::string input_path);
+
         FileReader m_file_reader;
+        LibarchiveReader m_libarchive_reader;
+        LibarchiveFileReader m_libarchive_file_reader;
         EncodedMessageParser m_encoded_message_parser;
         EncodedParsedMessage m_encoded_parsed_message;
         size_t m_clp_custom_buf_length;
         char m_clp_custom_encoding_buf[cCLPMagicNumberBufCapacity];
+        size_t m_validation_buf_length;
+        char m_archive_validation_buf[cArchiveValidationBufCapacity];
+        streaming_compression::zstd::Decompressor m_zstd_decompressor;
     };
 }
 

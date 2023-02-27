@@ -892,16 +892,26 @@ set(SOURCE_FILES_ir_decoder
         src/FileReader.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/streaming_compression/zstd/Decompressor.cpp
+        src/streaming_compression/zstd/Decompressor.hpp
+        src/streaming_compression/zstd/Constants.hpp
+        src/streaming_compression/Decompressor.cpp
+        src/streaming_compression/Decompressor.hpp
+        src/streaming_compression/Constants.hpp
+        src/LibarchiveReader.cpp
+        src/LibarchiveReader.hpp
+        src/LibarchiveFileReader.cpp
+        src/LibarchiveFileReader.hpp
     )
 add_executable(ir_decoder ${SOURCE_FILES_ir_decoder})
 target_link_libraries(ir_decoder
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        LibArchive::LibArchive
+        MariaDBClient::MariaDBClient
         ${STD_FS_LIBS}
         yaml-cpp::yaml-cpp
         ZStd::ZStd
