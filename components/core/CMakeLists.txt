@@ -873,14 +873,26 @@ target_compile_features(unitTest
         )
 
 set(SOURCE_FILES_ir_decoder
-    src/ir_decoder/ir_decoder.cpp
-    src/ir_decoder/CommandLineArguments.cpp
-    src/ir_decoder/CommandLineArguments.hpp
-    src/Profiler.cpp
-    src/Profiler.hpp
-    src/TimestampPattern.cpp
-    src/TimestampPattern.hpp
-    src/ir_decoder/Decoder.cpp src/ir_decoder/Decoder.hpp)
+        src/ir_decoder/ir_decoder.cpp
+        src/ir_decoder/CommandLineArguments.cpp
+        src/ir_decoder/CommandLineArguments.hpp
+        src/Profiler.cpp
+        src/Profiler.hpp
+        src/TimestampPattern.cpp
+        src/TimestampPattern.hpp
+        src/ir_decoder/Decoder.cpp
+        src/ir_decoder/Decoder.hpp
+        src/EncodedParsedMessage.cpp
+        src/EncodedParsedMessage.hpp
+        src/EncodedMessageParser.cpp
+        src/EncodedMessageParser.hpp
+        src/ir_decoder/utils.cpp
+        src/ir_decoder/utils.hpp
+        src/FileReader.cpp
+        src/FileReader.hpp
+        src/ReaderInterface.cpp
+        src/ReaderInterface.hpp
+    )
 add_executable(ir_decoder ${SOURCE_FILES_ir_decoder})
 target_link_libraries(ir_decoder
         PRIVATE

@@ -13,9 +13,11 @@
 #include "../Profiler.hpp"
 #include "../Utils.hpp"
 #include "../clp/utils.hpp"
+#include "Decoder.hpp"
 #include "CommandLineArguments.hpp"
 
 using ir_decoder::CommandLineArguments;
+using ir_decoder::Decoder;
 using std::string;
 using std::unordered_set;
 using std::vector;
@@ -23,6 +25,8 @@ using std::vector;
 
 bool decode (string ir_path, string output_path)
 {
+    Decoder ir_stream_decoder;
+    ir_stream_decoder.decode(ir_path);
     return true;
 }
 
