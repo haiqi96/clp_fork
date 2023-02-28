@@ -17,6 +17,7 @@ namespace ir_decoder {
     constexpr size_t cCLPMagicNumberBufCapacity = 4;
     class Decoder {
     public:
+        static bool is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted);
         bool decode(std::string input_path);
     private:
         // Methods

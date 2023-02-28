@@ -1,6 +1,5 @@
 #include "Decoder.hpp"
 
-#include "utils.hpp"
 #include <iostream>
 #include <set>
 
@@ -9,12 +8,28 @@
 
 // libarchive
 #include <archive_entry.h>
+#include "../ffi/ir_stream/protocol_constants.hpp"
+
+using ffi::ir_stream::cProtocol::MagicNumberLength;
+using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
+using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 
 namespace ir_decoder {
-    bool Decoder::decode (std::string input_path) {
 
+    bool Decoder::is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted) {
+        if(0 == memcmp(EightByteEncodingMagicNumber, sequence, MagicNumberLength)) {
+            is_compacted = false;
+            return true;
+        } else if (0 == memcmp(FourByteEncodingMagicNumber, sequence, MagicNumberLength)) {
+            is_compacted = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool Decoder::decode (std::string input_path) {
         m_file_reader.open(input_path);
-        // Check that file is CLP encoded
+        // For decode, support plain text for now. but we can always remove it later.
         auto error_code = m_file_reader.try_read(m_clp_custom_encoding_buf, cCLPMagicNumberBufCapacity, m_clp_custom_buf_length);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile != error_code) {
@@ -131,17 +146,9 @@ namespace ir_decoder {
         }
         // we don't parse the validation buffer anymore because it only contains the magic number
         /* was parsing the validation buffer */
-
-        if(false == is_compact_encoding) {
-            while (m_encoded_message_parser.parse_next_std_token(reader, m_encoded_parsed_message)) {
-                std::string recovered_string = m_encoded_parsed_message.recover_message();
-                std::cout << recovered_string;
-            }
-        } else {
-            while (m_encoded_message_parser.parse_next_compact_token(reader, m_encoded_parsed_message)) {
-                std::string recovered_string = m_encoded_parsed_message.recover_message();
-                std::cout << recovered_string;
-            }
+        while (m_encoded_message_parser.parse_next_token(reader, m_encoded_parsed_message)) {
+            std::string recovered_string = m_encoded_parsed_message.recover_message(is_compact_encoding);
+            std::cout << recovered_string;
         }
     }
 }

@@ -886,8 +886,6 @@ set(SOURCE_FILES_ir_decoder
         src/EncodedParsedMessage.hpp
         src/EncodedMessageParser.cpp
         src/EncodedMessageParser.hpp
-        src/ir_decoder/utils.cpp
-        src/ir_decoder/utils.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/ReaderInterface.cpp

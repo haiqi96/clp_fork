@@ -26,7 +26,6 @@ public:
     void clear();
     void clear_except_ts_patt();
     void set_ts_pattern(uint8_t num_spaces_before_ts, const std::string& format);
-    void set_encoding_version(const bool value) { is_compact_encoding = value;}
     void append_encoded_vars(encoded_variable_t var) { m_encoded_vars.push_back(var);};
     void set_log_msg(std::string& log_msg) {m_log_strings = log_msg;};
     void append_unencoded_vars(std::string unencoded_var) {m_unencoded_vars.push_back(unencoded_var);};
@@ -37,7 +36,7 @@ public:
         return m_order;
     };
 
-    std::string recover_message();
+    std::string recover_message(bool is_compact);
 
     const std::vector<std::string>& get_unencoded_vars() const {
         return m_unencoded_vars;
@@ -60,7 +59,6 @@ private:
     std::vector<std::string> m_unencoded_vars;
     std::vector<encoded_variable_t> m_encoded_vars;
     std::string m_log_strings;
-    bool is_compact_encoding;
     // true is encoded, not true is string vars
     std::vector<bool> m_order;
     epochtime_t m_ts;

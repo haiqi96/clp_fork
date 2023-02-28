@@ -249,6 +249,15 @@ bool EncodedMessageParser::parse_next_std_token(ReaderInterface &reader, Encoded
     return true;
 }
 
+bool
+EncodedMessageParser::parse_next_token (ReaderInterface& reader, EncodedParsedMessage& message) {
+    if(m_compact_encoding) {
+        return parse_next_compact_token(reader, message);
+    } else {
+        return parse_next_std_token(reader, message);
+    }
+}
+
 bool EncodedMessageParser::parse_metadata(ReaderInterface &reader, EncodedParsedMessage &message, bool is_compact_encoding) {
 
     unsigned char metadata_tagbyte;
@@ -288,20 +297,22 @@ bool EncodedMessageParser::parse_metadata(ReaderInterface &reader, EncodedParsed
     std::string buffer_str(buffer_vec.data(), metadata_length);
     auto j3 = nlohmann::json::parse(buffer_str);
     // TODO: LET IT USE THE TRUE TIMESTAMP FORMAT
-    // std::string time_stamp_string = "%y/%m/%d %H:%M:%S";
-    std::string time_stamp_string = "%Y-%m-%dT%H:%M:%S.%3Z";
+    // std::string time_stamp_string = j3.at("TIMESTAMP_PATTERN");
     std::string timezone_id = j3.at("TZ_ID");
     std::string encode_version = j3.at("VERSION");
+    std::string time_stamp_string;
     if(is_compact_encoding) {
         std::string reference_timestamp = j3.at("REFERENCE_TIMESTAMP");
         epochtime_t reference_ts = boost::lexical_cast<epochtime_t>(reference_timestamp);
         m_last_timestamp = reference_ts;
+        time_stamp_string = "%Y-%m-%dT%H:%M:%S.%3Z";
     } else {
         m_last_timestamp = 0;
+        time_stamp_string = "%y/%m/%d %H:%M:%S";
     }
     message.set_ts_pattern(0, time_stamp_string);
     m_timezone = timezone_id;
     m_version = encode_version;
-    message.set_encoding_version(is_compact_encoding);
+    m_compact_encoding = is_compact_encoding;
     return true;
 }
