@@ -27,7 +27,7 @@ namespace ir_decoder {
         return false;
     }
 
-    bool Decoder::decode (std::string input_path) {
+    bool Decoder::decode (std::string input_path, std::string output_path) {
         m_file_reader.open(input_path);
         // For decode, support plain text for now. but we can always remove it later.
         auto error_code = m_file_reader.try_read(m_clp_custom_encoding_buf, cCLPMagicNumberBufCapacity, m_clp_custom_buf_length);
@@ -37,6 +37,7 @@ namespace ir_decoder {
                 return false;
             }
         }
+        m_file_writer.open(output_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
 
         bool succeeded = true;
         bool is_compacted_encoding = false;
@@ -50,6 +51,7 @@ namespace ir_decoder {
             }
         }
 
+        m_file_writer.close();
         m_file_reader.close();
 
         return succeeded;
@@ -148,7 +150,7 @@ namespace ir_decoder {
         /* was parsing the validation buffer */
         while (m_encoded_message_parser.parse_next_token(reader, m_encoded_parsed_message)) {
             std::string recovered_string = m_encoded_parsed_message.recover_message(is_compact_encoding);
-            std::cout << recovered_string;
+            m_file_writer.write_string(recovered_string);
         }
     }
 }

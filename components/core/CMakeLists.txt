@@ -888,8 +888,12 @@ set(SOURCE_FILES_ir_decoder
         src/EncodedMessageParser.hpp
         src/FileReader.cpp
         src/FileReader.hpp
+        src/FileWriter.cpp
+        src/FileWriter.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/WriterInterface.cpp
+        src/WriterInterface.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
         src/streaming_compression/zstd/Constants.hpp

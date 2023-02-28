@@ -18,7 +18,7 @@ namespace ir_decoder {
     class Decoder {
     public:
         static bool is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted);
-        bool decode(std::string input_path);
+        bool decode(std::string input_path, std::string output_path);
     private:
         // Methods
         /**
@@ -36,6 +36,8 @@ namespace ir_decoder {
         bool try_compressing_as_archive(std::string input_path);
 
         FileReader m_file_reader;
+        FileWriter m_file_writer;
+
         LibarchiveReader m_libarchive_reader;
         LibarchiveFileReader m_libarchive_file_reader;
         EncodedMessageParser m_encoded_message_parser;

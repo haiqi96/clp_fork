@@ -26,7 +26,7 @@ using std::vector;
 bool decode (string ir_path, string output_path)
 {
     Decoder ir_stream_decoder;
-    ir_stream_decoder.decode(ir_path);
+    ir_stream_decoder.decode(ir_path, output_path);
     return true;
 }
 
