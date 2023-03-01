@@ -18,6 +18,8 @@ namespace ir_decoder {
     class Decoder {
     public:
         static bool is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted);
+        static encoded_variable_t convert_eightbytes_to_fourbytes(encoded_variable_t eightbyte_encoded_var);
+        static encoded_variable_t convert_fourbytes_to_eightbytes(encoded_variable_t fourbyte_encoded_var);
         bool decode(std::string input_path, std::string output_path);
     private:
         // Methods

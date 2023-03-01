@@ -65,7 +65,7 @@ private:
     bool parse_next_compact_token (ReaderInterface& reader, EncodedParsedMessage& message);
 
     void parse_unencoded_vars (ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
-    void parse_log_message(ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
+    void parse_log_type(ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
 
     // variables
     std::string m_timezone;
