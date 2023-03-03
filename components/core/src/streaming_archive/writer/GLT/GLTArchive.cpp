@@ -57,7 +57,7 @@ namespace streaming_archive::writer {
         m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
     }
 
-    void GLTArchive::write_ir_msg(const EncodedParsedMessage& encoded_msg) {
+    void GLTArchive::write_ir_msg(const ParsedIRMessage& encoded_msg) {
         // Encode message and add components to dictionaries
         std::vector<encoded_variable_t> encoded_vars;
         std::vector<variable_dictionary_id_t> var_ids;

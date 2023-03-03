@@ -337,10 +337,10 @@ set(SOURCE_FILES_clp
         submodules/sqlite3/sqlite3.h
         src/ir_decoder/Decoder.cpp
         src/ir_decoder/Decoder.hpp
-        src/EncodedParsedMessage.cpp
-        src/EncodedParsedMessage.hpp
-        src/EncodedMessageParser.cpp
-        src/EncodedMessageParser.hpp
+    src/ParsedIRMessage.cpp
+    src/ParsedIRMessage.hpp
+    src/IRMessageParser.cpp
+    src/IRMessageParser.hpp
         )
 add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp
@@ -860,6 +860,8 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
+        src/ir_decoder/Decoder.cpp
+        src/ir_decoder/Decoder.hpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
@@ -888,10 +890,10 @@ set(SOURCE_FILES_ir_decoder
         src/TimestampPattern.hpp
         src/ir_decoder/Decoder.cpp
         src/ir_decoder/Decoder.hpp
-        src/EncodedParsedMessage.cpp
-        src/EncodedParsedMessage.hpp
-        src/EncodedMessageParser.cpp
-        src/EncodedMessageParser.hpp
+    src/ParsedIRMessage.cpp
+    src/ParsedIRMessage.hpp
+    src/IRMessageParser.cpp
+    src/IRMessageParser.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp

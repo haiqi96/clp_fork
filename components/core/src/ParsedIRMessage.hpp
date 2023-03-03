@@ -5,7 +5,7 @@
 #include "Defs.h"
 #include <vector>
 
-class EncodedParsedMessage {
+class ParsedIRMessage {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -18,7 +18,7 @@ public:
             return "EncodedParsedMessage operation failed";
         }
     };
-    EncodedParsedMessage() {
+    ParsedIRMessage() {
         m_ts_patt = nullptr;
     }
 

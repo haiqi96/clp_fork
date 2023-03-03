@@ -14,14 +14,14 @@
 #include "ParsedMessage.hpp"
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
-#include "EncodedParsedMessage.hpp"
+#include "ParsedIRMessage.hpp"
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 /**
  * Class to parse log messages
  */
-class EncodedMessageParser {
+class IRMessageParser {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -45,10 +45,9 @@ public:
      * @param message
      * @return true if message parsed, false otherwise
      */
-    bool parse_metadata (ReaderInterface& reader, EncodedParsedMessage& message, bool is_compact_encoding);
-
-    bool parse_next_token(ReaderInterface& reader, EncodedParsedMessage& message);
-
+    bool parse_metadata (ReaderInterface& reader, ParsedIRMessage& message, bool is_compact_encoding);
+    bool parse_next_message(ReaderInterface& reader, ParsedIRMessage& message);
+    static bool is_ir_encoded(size_t sequence_length, const char* sequence, bool& is_compacted);
 private:
     // Methods
     /**
@@ -61,11 +60,11 @@ private:
     unsigned int read_unsigned (ReaderInterface &reader);
     unsigned long long read_long (ReaderInterface &reader);
 
-    bool parse_next_std_token (ReaderInterface& reader, EncodedParsedMessage& message);
-    bool parse_next_compact_token (ReaderInterface& reader, EncodedParsedMessage& message);
+    bool parse_next_std_message (ReaderInterface& reader, ParsedIRMessage& message);
+    bool parse_next_compact_message (ReaderInterface& reader, ParsedIRMessage& message);
 
-    void parse_unencoded_vars (ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
-    void parse_log_type(ReaderInterface& reader, EncodedParsedMessage& message, unsigned char tag_byte);
+    void parse_unencoded_vars (ReaderInterface& reader, ParsedIRMessage& message, unsigned char tag_byte);
+    void parse_log_type(ReaderInterface& reader, ParsedIRMessage& message, unsigned char tag_byte);
 
     // variables
     std::string m_timezone;

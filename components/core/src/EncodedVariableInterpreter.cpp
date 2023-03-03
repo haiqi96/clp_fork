@@ -202,7 +202,7 @@ void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_varia
     value[value_length - 1 - decimal_pos] = '.';
 }
 
-void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const EncodedParsedMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
+void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIRMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
                                                                   VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
                                                                   vector<variable_dictionary_id_t>& var_ids)
 {

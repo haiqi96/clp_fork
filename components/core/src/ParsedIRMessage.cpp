@@ -2,7 +2,7 @@
 // Created by haiqixu on 1/30/2022.
 //
 
-#include "EncodedParsedMessage.hpp"
+#include "ParsedIRMessage.hpp"
 
 // spdlog
 #include <spdlog/spdlog.h>
@@ -12,7 +12,7 @@ using ffi::VariablePlaceholder;
 using ffi::VariablePlaceholder;
 using ffi::VariablePlaceholder;
 
-void EncodedParsedMessage::set_ts_pattern(uint8_t num_spaces_before_ts, const std::string &format) {
+void ParsedIRMessage::set_ts_pattern(uint8_t num_spaces_before_ts, const std::string &format) {
     if(m_ts_patt != nullptr) {
         SPDLOG_ERROR("Unexpected not nullptr");
     }
@@ -21,7 +21,7 @@ void EncodedParsedMessage::set_ts_pattern(uint8_t num_spaces_before_ts, const st
 
 // TODO: this might be an issue. because we first clear it and then initialize
 // may be use a variable to check if this is initialized
-void EncodedParsedMessage::clear() {
+void ParsedIRMessage::clear() {
     if(m_ts_patt != nullptr) {
         m_ts_patt.reset();
     }
@@ -143,7 +143,7 @@ static void convert_compact_encoded_double_to_string (encoded_variable_t encoded
     value[value_length - 1 - decimal_pos] = '.';
 }
 
-void EncodedParsedMessage::recover_message(std::string& message) {
+void ParsedIRMessage::recover_message(std::string& message) {
     message.clear();
     size_t begin_pos = 0;
     size_t encoded_var_ix = 0;
@@ -175,7 +175,7 @@ void EncodedParsedMessage::recover_message(std::string& message) {
     m_ts_patt->insert_formatted_timestamp(m_ts, message);
 }
 
-void EncodedParsedMessage::recover_message_deprecated(std::string& message) {
+void ParsedIRMessage::recover_message_deprecated(std::string& message) {
     message.clear();
 
     size_t original_length = m_log_type.size();
@@ -212,7 +212,7 @@ void EncodedParsedMessage::recover_message_deprecated(std::string& message) {
     m_ts_patt->insert_formatted_timestamp(m_ts, message);
 }
 
-void EncodedParsedMessage::clear_except_ts_patt() {
+void ParsedIRMessage::clear_except_ts_patt() {
     m_dictionary_vars.clear();
     m_encoded_vars.clear();
     m_placeholder_pos.clear();

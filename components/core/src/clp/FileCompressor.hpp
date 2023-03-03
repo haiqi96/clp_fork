@@ -10,8 +10,8 @@
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
 #include "../ParsedMessage.hpp"
-#include "../EncodedParsedMessage.hpp"
-#include "../EncodedMessageParser.hpp"
+#include "../ParsedIRMessage.hpp"
+#include "../IRMessageParser.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 #include "../compressor_frontend/LogParser.hpp"
@@ -95,8 +95,8 @@ namespace clp {
 
         MessageParser m_message_parser;
         ParsedMessage m_parsed_message;
-        EncodedParsedMessage m_encoded_parsed_message;
-        EncodedMessageParser m_encoded_message_parser;
+        ParsedIRMessage m_encoded_parsed_message;
+        IRMessageParser m_encoded_message_parser;
         std::unique_ptr<compressor_frontend::LogParser> m_log_parser;
     };
 }

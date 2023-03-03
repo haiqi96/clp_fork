@@ -14,7 +14,6 @@
 // Project headers
 #include "../Profiler.hpp"
 #include "utils.hpp"
-#include "../ir_decoder/Decoder.hpp"
 
 using std::cout;
 using std::endl;
@@ -79,7 +78,7 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
     archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
 }
 
-static void write_ir_message_to_encoded_file (const EncodedParsedMessage& msg, streaming_archive::writer::Archive& archive) {
+static void write_ir_message_to_encoded_file (const ParsedIRMessage& msg, streaming_archive::writer::Archive& archive) {
     archive.write_ir_msg(msg);
 }
 
@@ -183,7 +182,7 @@ namespace clp {
         // TODO: each file only has one ts pattern so should be ok?
         archive_writer.change_ts_pattern(m_encoded_parsed_message.get_ts_patt());
 
-        while (m_encoded_message_parser.parse_next_token(reader, m_encoded_parsed_message)) {
+        while (m_encoded_message_parser.parse_next_message(reader, m_encoded_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
                 split_file_and_archive(archive_user_config, path_for_compression, group_id, m_encoded_parsed_message.get_ts_patt(), archive_writer);
             } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
@@ -305,7 +304,7 @@ namespace clp {
                 }
             }
             bool is_compact;
-            if (ir_decoder::Decoder::is_clp_magic_number(m_clp_validation_buf_length, m_clp_validation_buf, is_compact)) {
+            if (IRMessageParser::is_ir_encoded(m_clp_validation_buf_length, m_clp_validation_buf, is_compact)) {
                 auto boost_path_for_compression =
                         parent_boost_path / m_libarchive_reader.get_path();
                 encode_ir(target_data_size_of_dicts, archive_user_config,

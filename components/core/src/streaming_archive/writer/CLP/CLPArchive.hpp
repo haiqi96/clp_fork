@@ -21,7 +21,7 @@ namespace streaming_archive::writer {
                                    const boost::uuids::uuid& orig_file_id,
                                    size_t split_ix) override;
 
-        void write_ir_msg(const EncodedParsedMessage& encoded_msg);
+        void write_ir_msg(const ParsedIRMessage& encoded_msg);
 
         void write_msg (epochtime_t timestamp, const std::string& message,
                         size_t num_uncompressed_bytes) override;

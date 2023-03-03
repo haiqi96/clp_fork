@@ -10,7 +10,7 @@
 #include "TraceableException.hpp"
 #include "VariableDictionaryReader.hpp"
 #include "VariableDictionaryWriter.hpp"
-#include "EncodedParsedMessage.hpp"
+#include "ParsedIRMessage.hpp"
 
 /**
  * Class to parse and encode strings into encoded variables and to interpret encoded variables back into strings. An encoded variable is one of:
@@ -90,7 +90,7 @@ public:
      * @param encoded_vars
      * @param var_ids
      */
-    static void encode_ir_and_add_to_dictionary (const EncodedParsedMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
+    static void encode_ir_and_add_to_dictionary (const ParsedIRMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
                                                  VariableDictionaryWriter& var_dict, std::vector<encoded_variable_t>& encoded_vars,
                                                  std::vector<variable_dictionary_id_t>& var_ids);
 

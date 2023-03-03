@@ -8,10 +8,6 @@
 
 // libarchive
 #include <archive_entry.h>
-#include "../ffi/ir_stream/protocol_constants.hpp"
-using ffi::ir_stream::cProtocol::MagicNumberLength;
-using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
-using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 
 namespace ir_decoder {
 
@@ -71,17 +67,6 @@ namespace ir_decoder {
         return bit_cast<encoded_variable_t>(encoded_double);
     }
 
-    bool Decoder::is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted) {
-        if(0 == memcmp(EightByteEncodingMagicNumber, sequence, MagicNumberLength)) {
-            is_compacted = false;
-            return true;
-        } else if (0 == memcmp(FourByteEncodingMagicNumber, sequence, MagicNumberLength)) {
-            is_compacted = true;
-            return true;
-        }
-        return false;
-    }
-
     bool Decoder::decode (std::string input_path, std::string output_path) {
         m_file_reader.open(input_path);
         // For decode, support plain text for now. but we can always remove it later.
@@ -96,7 +81,7 @@ namespace ir_decoder {
 
         bool succeeded = true;
         bool is_compacted_encoding = false;
-        if (is_clp_magic_number(m_clp_custom_buf_length, m_clp_custom_encoding_buf, is_compacted_encoding)) {
+        if (IRMessageParser::is_ir_encoded(m_clp_custom_buf_length, m_clp_custom_encoding_buf, is_compacted_encoding)) {
             parse_and_decode(m_file_reader, is_compacted_encoding);
         } else {
             if (false == try_compressing_as_archive(input_path))
@@ -177,7 +162,7 @@ namespace ir_decoder {
 
             succeeded = true;
             bool is_compacted_encoding = false;
-            if (is_clp_magic_number(m_clp_custom_buf_length, m_clp_custom_encoding_buf, is_compacted_encoding)) {
+            if (IRMessageParser::is_ir_encoded(m_clp_custom_buf_length, m_clp_custom_encoding_buf, is_compacted_encoding)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
                 parse_and_decode(m_libarchive_file_reader, is_compacted_encoding);
             } else {
@@ -207,7 +192,7 @@ namespace ir_decoder {
         std::string recovered_string;
         // we don't parse the validation buffer anymore because it only contains the magic number
         /* was parsing the validation buffer */
-        while (m_encoded_message_parser.parse_next_token(reader, m_encoded_parsed_message)) {
+        while (m_encoded_message_parser.parse_next_message(reader, m_encoded_parsed_message)) {
             m_encoded_parsed_message.recover_message(recovered_string);
             m_file_writer.write_string(recovered_string);
         }

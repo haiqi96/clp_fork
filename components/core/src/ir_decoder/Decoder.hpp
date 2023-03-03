@@ -6,8 +6,8 @@
 #define IR_DECODER_DECODER_HPP
 
 #include "../FileReader.hpp"
-#include "../EncodedMessageParser.hpp"
-#include "../EncodedParsedMessage.hpp"
+#include "../IRMessageParser.hpp"
+#include "../ParsedIRMessage.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../streaming_compression/zstd/Decompressor.hpp"
@@ -19,7 +19,6 @@ namespace ir_decoder {
     constexpr size_t cIRValidationBufCapacity = ffi::ir_stream::cProtocol::MagicNumberLength;
     class Decoder {
     public:
-        static bool is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted);
         static encoded_variable_t convert_ir_4bytes_float_to_clp_8bytes_float(encoded_variable_t fourbyte_encoded_var);
         static encoded_variable_t convert_ir_8bytes_float_to_clp_8bytes_float(encoded_variable_t eightbyte_encoded_var);
         bool decode(std::string input_path, std::string output_path);
@@ -44,8 +43,8 @@ namespace ir_decoder {
 
         LibarchiveReader m_libarchive_reader;
         LibarchiveFileReader m_libarchive_file_reader;
-        EncodedMessageParser m_encoded_message_parser;
-        EncodedParsedMessage m_encoded_parsed_message;
+        IRMessageParser m_encoded_message_parser;
+        ParsedIRMessage m_encoded_parsed_message;
         size_t m_clp_custom_buf_length;
         char m_clp_custom_encoding_buf[cIRValidationBufCapacity];
         size_t m_validation_buf_length;

@@ -2,13 +2,12 @@
 // Created by haiqixu on 1/30/2022.
 //
 
-#include "EncodedMessageParser.hpp"
+#include "IRMessageParser.hpp"
 #include "../submodules/json/single_include/nlohmann/json.hpp"
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "ffi/encoding_methods.hpp"
-
-constexpr int JSON_ENCODING = 0x01;
+#include "ffi/ir_stream/protocol_constants.hpp"
 
 constexpr int VAR_COMPACT_ENCODING = 0x18;
 constexpr int VAR_STANDARD_ENCODING = 0x19;
@@ -16,7 +15,24 @@ constexpr int VAR_STR_LEN_UNSIGNED_BYTE = 0x11;
 constexpr int VAR_STR_LEN_UNSIGNED_SHORT = 0x12;
 constexpr int VAR_STR_LEN_SIGNED_INT = 0x13;
 
-unsigned char EncodedMessageParser::read_byte (ReaderInterface &reader) {
+using ffi::ir_stream::cProtocol::MagicNumberLength;
+using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
+using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
+
+bool IRMessageParser::is_ir_encoded(size_t sequence_length, const char* sequence, bool& is_compacted) {
+    if(0 == memcmp(ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber,
+                   sequence, ffi::ir_stream::cProtocol::MagicNumberLength)) {
+        is_compacted = false;
+        return true;
+    } else if (0 == memcmp(ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber,
+                           sequence, MagicNumberLength)) {
+        is_compacted = true;
+        return true;
+    }
+    return false;
+}
+
+unsigned char IRMessageParser::read_byte (ReaderInterface &reader) {
     unsigned char value = 0;
     size_t num_bytes_to_read = 1;
     size_t read_result;
@@ -27,7 +43,7 @@ unsigned char EncodedMessageParser::read_byte (ReaderInterface &reader) {
     }
     return value;
 }
-unsigned short EncodedMessageParser::read_short (ReaderInterface &reader) {
+unsigned short IRMessageParser::read_short (ReaderInterface &reader) {
     unsigned short value;
     size_t num_bytes_to_read = 2;
     size_t read_result;
@@ -38,7 +54,7 @@ unsigned short EncodedMessageParser::read_short (ReaderInterface &reader) {
     }
     return __builtin_bswap16 (value);
 }
-unsigned int EncodedMessageParser::read_unsigned (ReaderInterface &reader) {
+unsigned int IRMessageParser::read_unsigned (ReaderInterface &reader) {
     unsigned int value;
     size_t num_bytes_to_read = 4;
     size_t read_result;
@@ -49,7 +65,7 @@ unsigned int EncodedMessageParser::read_unsigned (ReaderInterface &reader) {
     }
     return __builtin_bswap32 (value);
 }
-unsigned long long EncodedMessageParser::read_long (ReaderInterface &reader) {
+unsigned long long IRMessageParser::read_long (ReaderInterface &reader) {
     unsigned long long value;
     size_t num_bytes_to_read = 8;
     size_t read_result;
@@ -91,7 +107,7 @@ bool is_place_holder(char val) {
     return false;
 }
 
-void EncodedMessageParser::parse_unencoded_vars(ReaderInterface &reader, EncodedParsedMessage &message, unsigned char tag_byte) {
+void IRMessageParser::parse_unencoded_vars(ReaderInterface &reader, ParsedIRMessage &message, unsigned char tag_byte) {
     // else case, variables are basically strings
     int length;
     if (tag_byte == VAR_STR_LEN_UNSIGNED_BYTE) {
@@ -119,7 +135,7 @@ void EncodedMessageParser::parse_unencoded_vars(ReaderInterface &reader, Encoded
     message.append_dict_vars(var_str);
 }
 
-void EncodedMessageParser::parse_log_type(ReaderInterface &reader, EncodedParsedMessage &message, unsigned char tag_byte) {
+void IRMessageParser::parse_log_type(ReaderInterface &reader, ParsedIRMessage &message, unsigned char tag_byte) {
     constexpr int LOGTYPE_STR_LEN_UNSIGNED_BYTE = 0x21;
     constexpr int LOGTYPE_STR_LEN_UNSIGNED_SHORT = 0x22;
     constexpr int LOGTYPE_STR_LEN_SIGNED_INT = 0x23;
@@ -158,7 +174,7 @@ void EncodedMessageParser::parse_log_type(ReaderInterface &reader, EncodedParsed
     message.set_log_type(log_type);
 }
 
-bool EncodedMessageParser::parse_next_compact_token(ReaderInterface &reader, EncodedParsedMessage &message) {
+bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, ParsedIRMessage &message) {
     message.clear_except_ts_patt();
 
     unsigned char tag_byte;
@@ -205,7 +221,6 @@ bool EncodedMessageParser::parse_next_compact_token(ReaderInterface &reader, Enc
         exit(-1);
     }
     epochtime_t timestamp = timestamp_delta_value + m_last_timestamp;
-    //std::cout << "Delta timestamp is " << timestamp_delta_value << ". last timestamp is " << message.get_last_timestamp() << ". final timestamp is " << timestamp << std::endl;
     m_last_timestamp = timestamp;
     //TODO: Remove this date hack. note this is different from standard encoding. Most probably due to winter time.
     message.set_time(timestamp);
@@ -213,7 +228,7 @@ bool EncodedMessageParser::parse_next_compact_token(ReaderInterface &reader, Enc
 }
 
 
-bool EncodedMessageParser::parse_next_std_token(ReaderInterface &reader, EncodedParsedMessage &message) {
+bool IRMessageParser::parse_next_std_message(ReaderInterface &reader, ParsedIRMessage &message) {
     message.clear_except_ts_patt();
 
     unsigned char tag_byte;
@@ -224,8 +239,6 @@ bool EncodedMessageParser::parse_next_std_token(ReaderInterface &reader, Encoded
     }
 
     while(is_std_variable_encoding_type(tag_byte)) {
-
-        // question: how do I extract those variables
         if (tag_byte == VAR_STANDARD_ENCODING) {
             // could be an issue?
             encoded_variable_t var_standard = read_long(reader);
@@ -257,69 +270,64 @@ bool EncodedMessageParser::parse_next_std_token(ReaderInterface &reader, Encoded
     return true;
 }
 
-bool EncodedMessageParser::parse_next_token (ReaderInterface& reader, EncodedParsedMessage& message) {
+bool IRMessageParser::parse_next_message (ReaderInterface& reader, ParsedIRMessage& message) {
     if(m_compact_encoding) {
-        return parse_next_compact_token(reader, message);
+        return parse_next_compact_message(reader, message);
     } else {
-        return parse_next_std_token(reader, message);
+        return parse_next_std_message(reader, message);
     }
 }
 
-bool EncodedMessageParser::parse_metadata(ReaderInterface &reader, EncodedParsedMessage &message, bool is_compact_encoding) {
+bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &message, bool is_compact_encoding) {
 
-    unsigned char metadata_tagbyte;
-    size_t read_length;
-    metadata_tagbyte = read_byte(reader);
+    unsigned char encoding_tag;
+    encoding_tag = read_byte(reader);
     // Check the metadata byte
-    if(metadata_tagbyte != JSON_ENCODING) {
+    if(encoding_tag != ffi::ir_stream::cProtocol::Metadata::EncodingJson) {
+        SPDLOG_ERROR("Invalid Encoding Tag {}", encoding_tag);
         return false;
     }
 
-    unsigned char length_data_type = read_byte(reader);
-
-    constexpr int METADATA_LEN_UBYTE = 0x11;
-    constexpr int METADATA_LEN_USHORT = 0x12;
-    constexpr int METADATA_LEN_INT = 0x13;
+    unsigned char length_tag = read_byte(reader);
 
     unsigned int metadata_length;
-    switch(length_data_type) {
-        case METADATA_LEN_UBYTE:
+    switch(length_tag) {
+        case ffi::ir_stream::cProtocol::Metadata::LengthUByte:
             metadata_length = read_byte(reader);
             break;
-        case METADATA_LEN_USHORT:
+        case ffi::ir_stream::cProtocol::Metadata::LengthUShort:
             metadata_length = read_short(reader);
             break;
-        case METADATA_LEN_INT:
-            metadata_length = read_unsigned(reader);
-            break;
         default:
-            printf("error\n");
+            SPDLOG_ERROR("Invalid Length Tag {}", length_tag);
+            return false;
     }
 
+    size_t read_length;
     std::vector<char> buffer_vec(metadata_length);
     auto error_code = reader.try_read(buffer_vec.data(), metadata_length, read_length);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to read metadata");
+        return false;
     }
     std::string buffer_str(buffer_vec.data(), metadata_length);
-    auto j3 = nlohmann::json::parse(buffer_str);
+    auto metadata_json = nlohmann::json::parse(buffer_str);
     // TODO: LET IT USE THE TRUE TIMESTAMP FORMAT
     // std::string time_stamp_string = j3.at("TIMESTAMP_PATTERN");
-    std::string timezone_id = j3.at("TZ_ID");
-    std::string encode_version = j3.at("VERSION");
-    std::string time_stamp_string;
+    std::string time_stamp_string = "%y/%m/%d %H:%M:%S";
+    m_timezone = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
+    m_version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    if (m_version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
+        SPDLOG_ERROR("Deprecated version: {}", m_version);
+    }
     if(is_compact_encoding) {
-        std::string reference_timestamp = j3.at("REFERENCE_TIMESTAMP");
-        epochtime_t reference_ts = boost::lexical_cast<epochtime_t>(reference_timestamp);
-        m_last_timestamp = reference_ts;
+        std::string reference_timestamp =
+                metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey);
+        m_last_timestamp = boost::lexical_cast<epochtime_t>(reference_timestamp);
         time_stamp_string = "%Y-%m-%dT%H:%M:%S.%3Z";
-    } else {
-        m_last_timestamp = 0;
-        time_stamp_string = "%y/%m/%d %H:%M:%S";
     }
     message.set_ts_pattern(0, time_stamp_string);
-    m_timezone = timezone_id;
-    m_version = encode_version;
+
     m_compact_encoding = is_compact_encoding;
     message.set_compact(is_compact_encoding);
     return true;
