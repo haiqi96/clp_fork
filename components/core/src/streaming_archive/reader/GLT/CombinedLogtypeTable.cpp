@@ -103,7 +103,6 @@ namespace streaming_archive::reader::glt {
 
         // seek decompressor to the correct offset
         const auto& logtype_metadata = metadata.at(logtype_id);
-        assert(logtype_metadata.combined_table_id == m_current_table_id);
         size_t table_offset = logtype_metadata.offset;
         decompressor.seek_from_begin(table_offset);
 
