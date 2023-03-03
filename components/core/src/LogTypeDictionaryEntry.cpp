@@ -108,6 +108,11 @@ void LogTypeDictionaryEntry::clear () {
     m_var_positions.clear();
 }
 
+void LogTypeDictionaryEntry::set(const string& logtype, const std::vector<size_t>& var_pos) {
+    m_value = logtype;
+    m_var_positions = var_pos;
+}
+
 void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
     compressor.write_numeric_value<uint8_t>(m_verbosity);

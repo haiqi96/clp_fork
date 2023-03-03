@@ -48,6 +48,7 @@ public:
     LogTypeDictionaryEntry& operator= (const LogTypeDictionaryEntry&) = default;
 
     // Methods
+    void set(const std::string& logtype, const std::vector<size_t>& var_pos);
     /**
      * Adds a non-double variable delimiter to the given logtype
      * @param logtype

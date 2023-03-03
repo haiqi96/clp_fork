@@ -11,10 +11,14 @@
 #include "Defs.h"
 #include "string_utils.hpp"
 #include "type_utils.hpp"
+#include "ffi/encoding_methods.hpp"
+#include "ir_decoder/Decoder.hpp"
 
 using std::string;
 using std::unordered_set;
 using std::vector;
+using ffi::VariablePlaceholder;
+using ir_decoder::Decoder;
 
 encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_range_begin () {
     return m_var_dict_id_range_begin;
@@ -196,6 +200,41 @@ void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_varia
 
     // Add decimal
     value[value_length - 1 - decimal_pos] = '.';
+}
+
+void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const EncodedParsedMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
+                                                                  VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
+                                                                  vector<variable_dictionary_id_t>& var_ids)
+{
+    // Extract all variables and add to dictionary while building logtype
+    logtype_dict_entry.clear();
+    size_t ir_encoded_var_ix = 0;
+    size_t ir_dictionary_var_ix = 0;
+    const auto& ir_encoded_vars = message.get_encoded_vars();
+    const auto& dictionary_vars = message.get_dictionary_vars();
+    const auto& var_pos = message.get_placeholder_pos();
+    std::string logtype_str = message.get_log_type();
+    std::string var_str;
+    if(!message.is_compact()) {
+        for (auto pos : var_pos) {
+            char placeholder = logtype_str.at(pos);
+            if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
+                encoded_vars.push_back(Decoder::convert_ir_8bytes_float_to_clp_8bytes_float(ir_encoded_vars.at(ir_encoded_var_ix++)));
+                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Double);
+            } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Integer)) {
+                encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
+                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+            } else {
+                variable_dictionary_id_t id;
+                var_str = dictionary_vars.at(ir_dictionary_var_ix++);
+                var_dict.add_entry(var_str, id);
+                encoded_vars.push_back(encode_var_dict_id(id));
+                var_ids.push_back(id);
+                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+            }
+        }
+    }
+    logtype_dict_entry.set(logtype_str, var_pos);
 }
 
 void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,

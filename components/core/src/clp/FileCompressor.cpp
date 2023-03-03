@@ -14,6 +14,7 @@
 // Project headers
 #include "../Profiler.hpp"
 #include "utils.hpp"
+#include "../ir_decoder/Decoder.hpp"
 
 using std::cout;
 using std::endl;
@@ -76,6 +77,11 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
     }
 
     archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
+}
+
+static void write_ir_message_to_encoded_file (const EncodedParsedMessage& msg, streaming_archive::writer::Archive& archive) {
+
+    archive.write_ir_msg(msg);
 }
 
 namespace clp {
@@ -160,6 +166,37 @@ namespace clp {
         archive_user_config = archive_writer.m_archive_user_config;
         //close_file_watch.stop();
         //close_file_watch.print();
+    }
+
+    void FileCompressor::encode_ir(size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                   size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
+                                   streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader, bool is_compact)
+    {
+        if (is_compact) {
+            SPDLOG_ERROR("Not supporting compact encoding atm.");
+            throw;
+        }
+        // here we also clear the TS pattern?
+        m_encoded_parsed_message.clear();
+
+        if(!m_encoded_message_parser.parse_metadata(reader, m_encoded_parsed_message, is_compact)){
+            SPDLOG_ERROR("Corrupted metadata.");
+            throw;
+        };
+        // Open compressed file
+        archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
+        // TODO: each file only has one ts pattern so should be ok?
+        archive_writer.change_ts_pattern(m_encoded_parsed_message.get_ts_patt());
+
+        while (m_encoded_message_parser.parse_next_token(reader, m_encoded_parsed_message)) {
+            if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
+                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_encoded_parsed_message.get_ts_patt(), archive_writer);
+            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
+                split_file(path_for_compression, group_id, m_encoded_parsed_message.get_ts_patt(), archive_writer);
+            }
+            write_ir_message_to_encoded_file(m_encoded_parsed_message, archive_writer);
+        }
+        close_file_and_append_to_segment(archive_writer);
     }
 
     void FileCompressor::parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -262,8 +299,8 @@ namespace clp {
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
 
-            // Check that file is UTF-8 encoded
-            error_code = m_libarchive_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
+            // Check that if the file is an IR
+            error_code = m_libarchive_file_reader.try_read(m_clp_validation_buf, cIRValidationBufCapacity, m_clp_validation_buf_length);
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {
                     SPDLOG_ERROR("Failed to read {} from {}.", m_libarchive_reader.get_path(), file_to_compress.get_path().c_str());
@@ -272,19 +309,54 @@ namespace clp {
                     continue;
                 }
             }
-            if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
-                auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
-                if (use_heuristic) {
-                    parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
-                                                    boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
-                                                    m_libarchive_file_reader);
-                } else {
-                    parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
-                                     file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
-                }
+            bool is_compact;
+            if (ir_decoder::Decoder::is_clp_magic_number(m_clp_validation_buf_length, m_clp_validation_buf, is_compact)) {
+                auto boost_path_for_compression =
+                        parent_boost_path / m_libarchive_reader.get_path();
+                encode_ir(target_data_size_of_dicts, archive_user_config,
+                          target_encoded_file_size,
+                          boost_path_for_compression.string(),
+                          file_to_compress.get_group_id(), archive_writer,
+                          m_libarchive_file_reader, is_compact);
             } else {
-                SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
-                succeeded = false;
+                // Check that file is UTF-8 encoded
+                error_code = m_libarchive_file_reader.try_read(
+                        m_utf8_validation_buf + m_clp_validation_buf_length,
+                        cUtf8ValidationBufCapacity - m_clp_validation_buf_length,
+                        m_utf8_validation_buf_length);
+                if (ErrorCode_Success != error_code) {
+                    if (ErrorCode_EndOfFile != error_code) {
+                        SPDLOG_ERROR("Failed to read {} from {}.", m_libarchive_reader.get_path(),
+                                     file_to_compress.get_path().c_str());
+                        m_libarchive_file_reader.close();
+                        succeeded = false;
+                        continue;
+                    }
+                }
+                memcpy(m_utf8_validation_buf, m_clp_validation_buf, m_clp_validation_buf_length);
+                m_utf8_validation_buf_length += m_clp_validation_buf_length;
+
+                if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
+                    auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
+                    if (use_heuristic) {
+                        parse_and_encode_with_heuristic(target_data_size_of_dicts,
+                                                        archive_user_config,
+                                                        target_encoded_file_size,
+                                                        boost_path_for_compression.string(),
+                                                        file_to_compress.get_group_id(),
+                                                        archive_writer,
+                                                        m_libarchive_file_reader);
+                    } else {
+                        parse_and_encode(target_data_size_of_dicts, archive_user_config,
+                                         target_encoded_file_size,
+                                         boost_path_for_compression.string(),
+                                         file_to_compress.get_group_id(), archive_writer,
+                                         m_libarchive_file_reader);
+                    }
+                } else {
+                    SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
+                    succeeded = false;
+                }
             }
 
             m_libarchive_file_reader.close();

@@ -32,10 +32,15 @@ public:
     void set_time(epochtime_t t) { m_ts = t; }
     void add_placeholder(size_t pos) { m_placeholder_pos.push_back(pos); }
     void set_compact(bool is_compact) { m_is_compact = is_compact; }
+    bool is_compact() const { return m_is_compact; }
 
     void recover_message(std::string& message);
 
     void recover_message_deprecated(std::string& message);
+
+    const std::vector<size_t>& get_placeholder_pos() const {
+        return m_placeholder_pos;
+    }
 
     const std::vector<std::string>& get_dictionary_vars() const {
         return m_dictionary_vars;
@@ -49,8 +54,14 @@ public:
     epochtime_t get_timestamp() const {
         return m_ts;
     }
+    const TimestampPattern* get_ts_patt() const {
+        return m_ts_patt.get();
+    }
 
-
+    //TODO: update this
+    const size_t get_original_bytes() const {
+        return 16;
+    }
 private:
     // note, the scope of this m_ts_patt is for a whole file. which means
     // for the same parse_and_encode, the timestamp will last there forever

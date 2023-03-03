@@ -321,5 +321,6 @@ bool EncodedMessageParser::parse_metadata(ReaderInterface &reader, EncodedParsed
     m_timezone = timezone_id;
     m_version = encode_version;
     m_compact_encoding = is_compact_encoding;
+    message.set_compact(is_compact_encoding);
     return true;
 }

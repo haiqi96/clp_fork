@@ -10,12 +10,16 @@
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
 #include "../ParsedMessage.hpp"
+#include "../EncodedParsedMessage.hpp"
+#include "../EncodedMessageParser.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 #include "../compressor_frontend/LogParser.hpp"
+#include "../ffi/ir_stream/protocol_constants.hpp"
 
 namespace clp {
     constexpr size_t cUtf8ValidationBufCapacity = 4096;
+    constexpr size_t cIRValidationBufCapacity = ffi::ir_stream::cProtocol::MagicNumberLength;
 
     /**
      * Class to parse and compress a file into a streaming archive
@@ -61,6 +65,10 @@ namespace clp {
                                               size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
                                               streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
 
+        void encode_ir (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                        size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
+                        streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader, bool is_compact);
+
         /**
          * Tries to compress the given file as if it were a generic archive_writer
          * @param target_data_size_of_dicts
@@ -80,10 +88,15 @@ namespace clp {
         FileReader m_file_reader;
         LibarchiveReader m_libarchive_reader;
         LibarchiveFileReader m_libarchive_file_reader;
+        char m_clp_validation_buf[cIRValidationBufCapacity];
         char m_utf8_validation_buf[cUtf8ValidationBufCapacity];
         size_t m_utf8_validation_buf_length;
+        size_t m_clp_validation_buf_length;
+
         MessageParser m_message_parser;
         ParsedMessage m_parsed_message;
+        EncodedParsedMessage m_encoded_parsed_message;
+        EncodedMessageParser m_encoded_message_parser;
         std::unique_ptr<compressor_frontend::LogParser> m_log_parser;
     };
 }

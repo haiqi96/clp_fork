@@ -29,6 +29,8 @@ namespace streaming_archive::writer {
                                      uint32_t uncompressed_msg_pos, bool has_delimiter,
                                      bool has_timestamp) override;
 
+        void write_ir_msg(const EncodedParsedMessage& encoded_msg);
+
         void append_file_to_segment () override;
 
         size_t get_stable_size () const override;

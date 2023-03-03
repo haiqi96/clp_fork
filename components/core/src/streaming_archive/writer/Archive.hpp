@@ -22,6 +22,8 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../MetadataDB.hpp"
 
+#include "../../EncodedParsedMessage.hpp"
+
 namespace streaming_archive::writer {
     class Archive {
     public:
@@ -140,6 +142,8 @@ namespace streaming_archive::writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         virtual void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes) = 0;
+
+        virtual void write_ir_msg(const EncodedParsedMessage& encoded_msg) = 0;
 
         /**
          * Encodes and writes a message to the given file or segment using schema file

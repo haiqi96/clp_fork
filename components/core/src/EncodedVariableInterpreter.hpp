@@ -10,6 +10,7 @@
 #include "TraceableException.hpp"
 #include "VariableDictionaryReader.hpp"
 #include "VariableDictionaryWriter.hpp"
+#include "EncodedParsedMessage.hpp"
 
 /**
  * Class to parse and encode strings into encoded variables and to interpret encoded variables back into strings. An encoded variable is one of:
@@ -80,6 +81,19 @@ public:
      */
     static void encode_and_add_to_dictionary (const std::string& message, LogTypeDictionaryEntry& logtype_dict_entry, VariableDictionaryWriter& var_dict,
                                               std::vector<encoded_variable_t>& encoded_vars, std::vector<variable_dictionary_id_t>& var_ids);
+
+    /**
+     * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
+     * @param message
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param encoded_vars
+     * @param var_ids
+     */
+    static void encode_ir_and_add_to_dictionary (const EncodedParsedMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
+                                                 VariableDictionaryWriter& var_dict, std::vector<encoded_variable_t>& encoded_vars,
+                                                 std::vector<variable_dictionary_id_t>& var_ids);
+
     /**
      * Decodes all variables and decompresses them into a message
      * @param logtype_dict_entry

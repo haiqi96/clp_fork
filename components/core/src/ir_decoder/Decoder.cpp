@@ -15,8 +15,35 @@ using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 
 namespace ir_decoder {
 
-    encoded_variable_t Decoder::convert_eightbytes_to_fourbytes(encoded_variable_t eightbyte_encoded_var) {
+    encoded_variable_t Decoder::convert_fourbytes_to_eightbytes(encoded_variable_t eightbyte_encoded_var) {
+        return 0;
+    }
 
+    encoded_variable_t Decoder::convert_ir_8bytes_float_to_clp_8bytes_float(encoded_variable_t eightbyte_encoded_var) {
+        auto encoded_float = bit_cast<uint64_t>(eightbyte_encoded_var);
+
+        // Decode according to the format described in encode_float_string
+        size_t decimal_pos = (encoded_float & 0x0F) + 1;
+        encoded_float >>= 4;
+        size_t num_digits = (encoded_float & 0x0F) + 1;
+        encoded_float >>= 4;
+        constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
+        size_t digits = encoded_float & cEightByteEncodedFloatDigitsBitMask;
+        encoded_float >>= 55;
+        bool is_negative = encoded_float > 0;
+
+        // encode again.
+        uint64_t encoded_double = 0;
+        if (is_negative) {
+            encoded_double = 1;
+        }
+        encoded_double <<= 4;
+        encoded_double |= (num_digits - 1) & 0x0F;
+        encoded_double <<= 4;
+        encoded_double |= (decimal_pos - 1) & 0x0F;
+        encoded_double <<= 55;
+        encoded_double |= digits & 0x003FFFFFFFFFFFFF;
+        return bit_cast<encoded_variable_t>(encoded_double);
     }
 
     bool Decoder::is_clp_magic_number(size_t sequence_length, const char* sequence, bool& is_compacted) {
@@ -33,7 +60,7 @@ namespace ir_decoder {
     bool Decoder::decode (std::string input_path, std::string output_path) {
         m_file_reader.open(input_path);
         // For decode, support plain text for now. but we can always remove it later.
-        auto error_code = m_file_reader.try_read(m_clp_custom_encoding_buf, cCLPMagicNumberBufCapacity, m_clp_custom_buf_length);
+        auto error_code = m_file_reader.try_read(m_clp_custom_encoding_buf, cIRValidationBufCapacity, m_clp_custom_buf_length);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile != error_code) {
                 SPDLOG_ERROR("Failed to read {}, errno={}", input_path.c_str(), errno);
@@ -74,14 +101,16 @@ namespace ir_decoder {
 
         // TODO: theratically we don't need m_archive_validation_buf but can't get it working atm
         // so for now, read some data into m_archive_validation_buf.
-        m_file_reader.seek_from_begin(0);
-        auto error_code = m_file_reader.try_read(m_archive_validation_buf, cArchiveValidationBufCapacity, m_validation_buf_length);
+        char* offset_ptr = m_archive_validation_buf + m_clp_custom_buf_length;
+        auto error_code = m_file_reader.try_read(offset_ptr, cArchiveValidationBufCapacity - m_clp_custom_buf_length, m_validation_buf_length);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile != error_code) {
                 SPDLOG_ERROR("Failed to read {}, errno={}", input_path.c_str(), errno);
                 return false;
             }
         }
+        memcpy(m_archive_validation_buf, m_clp_custom_encoding_buf, m_clp_custom_buf_length);
+        m_validation_buf_length += m_clp_custom_buf_length;
         error_code = m_libarchive_reader.try_open(m_validation_buf_length, m_archive_validation_buf, m_file_reader, filename_if_compressed);
         if (ErrorCode_Success != error_code) {
             SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", input_path.c_str());
@@ -113,7 +142,7 @@ namespace ir_decoder {
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
 
             // Check that file is CLP encoded
-            auto error_code = m_libarchive_file_reader.try_read(m_clp_custom_encoding_buf, cCLPMagicNumberBufCapacity, m_clp_custom_buf_length);
+            auto error_code = m_libarchive_file_reader.try_read(m_clp_custom_encoding_buf, cIRValidationBufCapacity, m_clp_custom_buf_length);
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {
                     SPDLOG_ERROR("Failed to read {}, errno={}", input_path, errno);

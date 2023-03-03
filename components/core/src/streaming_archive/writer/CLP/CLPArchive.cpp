@@ -39,6 +39,21 @@ namespace streaming_archive::writer {
         }
     }
 
+    void CLPArchive::write_ir_msg(const EncodedParsedMessage& encoded_msg) {
+        // Encode message and add components to dictionaries
+        std::vector<encoded_variable_t> encoded_vars;
+        std::vector<variable_dictionary_id_t> var_ids;
+        EncodedVariableInterpreter::encode_ir_and_add_to_dictionary(encoded_msg, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
+        logtype_dictionary_id_t logtype_id;
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
+
+        m_clp_file->write_encoded_msg(encoded_msg.get_timestamp(), logtype_id, encoded_vars, var_ids, encoded_msg.get_original_bytes());
+
+        // Update segment indices
+        m_logtype_ids_in_segment.insert(logtype_id);
+        m_var_ids_in_segment.insert_all(var_ids);
+    }
+
     void CLPArchive::write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes) {
         // Encode message and add components to dictionaries
         std::vector<encoded_variable_t> encoded_vars;
