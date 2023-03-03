@@ -15,8 +15,33 @@ using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 
 namespace ir_decoder {
 
-    encoded_variable_t Decoder::convert_fourbytes_to_eightbytes(encoded_variable_t eightbyte_encoded_var) {
-        return 0;
+    encoded_variable_t Decoder::convert_ir_4bytes_float_to_clp_8bytes_float(encoded_variable_t four_encoded_var) {
+        // the valid bit is only at last 32bit.
+        auto encoded_float = bit_cast<uint64_t>(four_encoded_var);
+
+        // Decode according to the format described in encode_string_as_float_compact_var
+        size_t decimal_pos = (encoded_float & 0x07) + 1;
+        encoded_float >>= 3;
+        size_t num_digits = (encoded_float & 0x07) + 1;
+        encoded_float >>= 3;
+        constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
+        size_t digits = encoded_float & cFourByteEncodedFloatDigitsBitMask;
+        encoded_float >>= 25;
+        bool is_negative = encoded_float > 0;
+
+        // encode again.
+        uint64_t encoded_double = 0;
+        if (is_negative) {
+            encoded_double = 1;
+        }
+        encoded_double <<= 4;
+        encoded_double |= (num_digits - 1) & 0x0F;
+        encoded_double <<= 4;
+        encoded_double |= (decimal_pos - 1) & 0x0F;
+        encoded_double <<= 55;
+        encoded_double |= digits & 0x003FFFFFFFFFFFFF;
+        return bit_cast<encoded_variable_t>(encoded_double);
+
     }
 
     encoded_variable_t Decoder::convert_ir_8bytes_float_to_clp_8bytes_float(encoded_variable_t eightbyte_encoded_var) {

@@ -80,7 +80,6 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
 }
 
 static void write_ir_message_to_encoded_file (const EncodedParsedMessage& msg, streaming_archive::writer::Archive& archive) {
-
     archive.write_ir_msg(msg);
 }
 
@@ -172,10 +171,6 @@ namespace clp {
                                    size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
                                    streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader, bool is_compact)
     {
-        if (is_compact) {
-            SPDLOG_ERROR("Not supporting compact encoding atm.");
-            throw;
-        }
         // here we also clear the TS pattern?
         m_encoded_parsed_message.clear();
 
