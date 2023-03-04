@@ -19,8 +19,6 @@ namespace ir_decoder {
     constexpr size_t cIRValidationBufCapacity = ffi::ir_stream::cProtocol::MagicNumberLength;
     class Decoder {
     public:
-        static encoded_variable_t convert_ir_4bytes_float_to_clp_8bytes_float(encoded_variable_t fourbyte_encoded_var);
-        static encoded_variable_t convert_ir_8bytes_float_to_clp_8bytes_float(encoded_variable_t eightbyte_encoded_var);
         bool decode(std::string input_path, std::string output_path);
     private:
         // Methods
