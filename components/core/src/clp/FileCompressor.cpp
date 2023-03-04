@@ -294,6 +294,7 @@ namespace clp {
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
 
             // Check that if the file is an IR
+            memset(m_clp_validation_buf, 0, cIRValidationBufCapacity);
             error_code = m_libarchive_file_reader.try_read(m_clp_validation_buf, cIRValidationBufCapacity, m_clp_validation_buf_length);
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {
@@ -304,7 +305,7 @@ namespace clp {
                 }
             }
             bool is_compact;
-            if (IRMessageParser::is_ir_encoded(m_clp_validation_buf_length, m_clp_validation_buf, is_compact)) {
+            if (IRMessageParser::is_ir_encoded(m_clp_validation_buf, is_compact)) {
                 auto boost_path_for_compression =
                         parent_boost_path / m_libarchive_reader.get_path();
                 encode_ir(target_data_size_of_dicts, archive_user_config,

@@ -47,7 +47,7 @@ public:
      */
     bool parse_metadata (ReaderInterface& reader, ParsedIRMessage& message, bool is_compact_encoding);
     bool parse_next_message(ReaderInterface& reader, ParsedIRMessage& message);
-    static bool is_ir_encoded(size_t sequence_length, const char* sequence, bool& is_compacted);
+    static bool is_ir_encoded(const char* buf, bool& is_compacted);
 private:
     // Methods
     /**
@@ -55,16 +55,16 @@ private:
      * @param message
      * @return Whether a complete message has been parsed
      */
-    unsigned char read_byte (ReaderInterface &reader);
-    unsigned short read_short (ReaderInterface &reader);
-    unsigned int read_unsigned (ReaderInterface &reader);
-    unsigned long long read_long (ReaderInterface &reader);
+    uint8_t read_byte (ReaderInterface &reader);
+    uint16_t read_short (ReaderInterface &reader);
+    uint32_t read_unsigned (ReaderInterface &reader);
+    uint64_t read_long (ReaderInterface &reader);
 
     bool parse_next_std_message (ReaderInterface& reader, ParsedIRMessage& message);
     bool parse_next_compact_message (ReaderInterface& reader, ParsedIRMessage& message);
 
-    void parse_unencoded_vars (ReaderInterface& reader, ParsedIRMessage& message, unsigned char tag_byte);
-    void parse_log_type(ReaderInterface& reader, ParsedIRMessage& message, unsigned char tag_byte);
+    void parse_dictionary_var (ReaderInterface& reader, ParsedIRMessage& message, uint8_t tag_byte);
+    void parse_log_type(ReaderInterface& reader, ParsedIRMessage& message, uint8_t tag_byte);
 
     // variables
     std::string m_timezone;

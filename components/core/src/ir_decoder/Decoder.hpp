@@ -45,8 +45,8 @@ namespace ir_decoder {
         LibarchiveFileReader m_libarchive_file_reader;
         IRMessageParser m_encoded_message_parser;
         ParsedIRMessage m_encoded_parsed_message;
-        size_t m_clp_custom_buf_length;
-        char m_clp_custom_encoding_buf[cIRValidationBufCapacity];
+        size_t m_ir_validation_buf_length;
+        char m_ir_validation_buf[cIRValidationBufCapacity];
         size_t m_validation_buf_length;
         char m_archive_validation_buf[cArchiveValidationBufCapacity];
         streaming_compression::zstd::Decompressor m_zstd_decompressor;
