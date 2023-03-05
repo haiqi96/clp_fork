@@ -101,6 +101,7 @@ namespace ffi {
             encoded_float |= (decimal_point_pos - 1) & 0x0F;
             encoded_var = bit_cast<encoded_variable_t>(encoded_float);
         } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
+            // Ideally we should also check length of num_digits and decimal pos
             if (digits > cFourByteEncodedFloatDigitsBitMask) {
                 // digits is larger than maximum representable
                 return false;

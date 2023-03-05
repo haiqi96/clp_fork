@@ -19,6 +19,8 @@ using std::unordered_set;
 using std::vector;
 using ffi::VariablePlaceholder;
 
+#include <iostream>
+
 encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_range_begin () {
     return m_var_dict_id_range_begin;
 }
@@ -244,6 +246,47 @@ EncodedVariableInterpreter::convert_ir_float_to_clp_double (encoded_variable_t i
     return bit_cast<encoded_variable_t>(encoded_double);
 }
 
+bool EncodedVariableInterpreter::convert_clp_int_to_compact_ir_int (
+        encoded_variable_t clp_int, int32_t& ir_int) {
+    if (clp_int <= INT32_MAX && clp_int >= INT32_MIN) {
+        ir_int = clp_int;
+        return true;
+    }
+    return false;
+}
+
+bool EncodedVariableInterpreter::convert_clp_double_to_compact_ir_float (
+        encoded_variable_t clp_double, uint32_t& ir_float) {
+    auto encoded_double = bit_cast<uint64_t>(clp_double);
+
+    // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
+    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
+    encoded_double >>= 55;
+    // here we don't need to plus 1
+    uint8_t decimal_pos = (encoded_double & 0x0F);
+    encoded_double >>= 4;
+    uint8_t num_digits = (encoded_double & 0x0F);
+    encoded_double >>= 4;
+    bool is_negative = encoded_double > 0;
+
+    if(decimal_pos > 0x07 || num_digits > 0x07 || digits > ffi::cFourByteEncodedFloatDigitsBitMask) {
+        return false;
+    }
+
+    ir_float = 0;
+    if (is_negative) {
+        ir_float = 1;
+    }
+    ir_float <<= 25;  // 25 for digits of the float
+    ir_float |= digits & ffi::cFourByteEncodedFloatDigitsBitMask;
+    ir_float <<= 3;
+    ir_float |= num_digits & 0x07;
+    ir_float <<= 3;
+    ir_float |= decimal_pos & 0x07;
+
+    return true;
+}
+
 void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIRMessage& message, LogTypeDictionaryEntry& logtype_dict_entry,
                                                                   VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
                                                                   vector<variable_dictionary_id_t>& var_ids)
@@ -294,6 +337,62 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
     logtype_dict_entry.set(logtype_str, var_pos);
 }
 
+static void convert_compact_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value) {
+    uint64_t encoded_double;
+    static_assert(sizeof(encoded_double) == sizeof(encoded_var), "sizeof(encoded_double) != sizeof(encoded_var)");
+    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
+    std::memcpy(&encoded_double, &encoded_var, sizeof(encoded_var));
+
+    assert((encoded_double & 0xFFFFFFFF00000000) == 0);
+
+    // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
+    uint8_t decimal_pos = (encoded_double & 0x07) + 1;
+    encoded_double >>= 3;
+    uint8_t num_digits = (encoded_double & 0x07) + 1;
+    encoded_double >>= 3;
+    uint64_t digits = encoded_double & 0x1FFFFFF;
+    encoded_double >>= 25;
+    bool is_negative = encoded_double > 0;
+
+    size_t value_length = num_digits + 1 + is_negative;
+    value.resize(value_length);
+    size_t num_chars_to_process = value_length;
+
+    // Add sign
+    if (is_negative) {
+        value[0] = '-';
+        --num_chars_to_process;
+    }
+
+    // Decode until the decimal or the non-zero digits are exhausted
+    size_t pos = value_length - 1;
+    for (; pos > (value_length - 1 - decimal_pos) && digits > 0; --pos) {
+        value[pos] = (char)('0' + (digits % 10));
+        digits /= 10;
+        --num_chars_to_process;
+    }
+
+    if (digits > 0) {
+        // Skip decimal since it's added at the end
+        --pos;
+        --num_chars_to_process;
+
+        while (digits > 0) {
+            value[pos--] = (char)('0' + (digits % 10));
+            digits /= 10;
+            --num_chars_to_process;
+        }
+    }
+
+    // Add remaining zeros
+    for (; num_chars_to_process > 0; --num_chars_to_process) {
+        value[pos--] = '0';
+    }
+
+    // Add decimal
+    value[value_length - 1 - decimal_pos] = '.';
+}
+
 void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,
                                                                VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
                                                                vector<variable_dictionary_id_t>& var_ids)
@@ -309,8 +408,32 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
         // Encode variable
         encoded_variable_t encoded_var;
         if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
+            int32_t ir_int;
+            bool conversion_success = convert_clp_int_to_compact_ir_int(encoded_var, ir_int);
+            if(conversion_success) {
+                if(ir_int != encoded_var) {
+                    std::cout << "int not equal, clp: " << encoded_var << ". ir: " << ir_int << std::endl;
+                    throw;
+                }
+            }
+            else {
+                std::cout << "can't convert int: " << var_str << std::endl;
+            }
             logtype_dict_entry.add_non_double_var();
         } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
+            uint32_t ir_float;
+            bool conversion_success = convert_clp_double_to_compact_ir_float(encoded_var, ir_float);
+            if(conversion_success) {
+                std::string value;
+                convert_compact_encoded_double_to_string(ir_float, value);
+                if(value != var_str) {
+                    std::cout << "float not equal, clp: " << var_str << ". ir: " << value << std::endl;
+                    throw;
+                }
+            }
+            else {
+                std::cout << "can't convert float: " << var_str << std::endl;
+            }
             logtype_dict_entry.add_double_var();
         } else {
             // Variable string looks like a dictionary variable, so encode it as so

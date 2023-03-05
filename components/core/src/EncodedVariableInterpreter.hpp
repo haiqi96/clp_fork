@@ -77,6 +77,13 @@ public:
     static encoded_variable_t convert_ir_float_to_clp_double (encoded_variable_t ir_var, bool compact_encoding);
 
     /**
+     * Converts clp encoded data to compact ir data
+     */
+    static bool convert_clp_int_to_compact_ir_int (encoded_variable_t clp_int, int32_t& ir_int);
+    static bool convert_clp_double_to_compact_ir_float (encoded_variable_t clp_double, uint32_t& ir_float);
+
+
+    /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
      * @param message
      * @param logtype_dict_entry
