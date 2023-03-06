@@ -36,8 +36,6 @@ public:
 
     void recover_message(std::string& message);
 
-    void recover_message_deprecated(std::string& message);
-
     const std::vector<size_t>& get_placeholder_pos() const {
         return m_placeholder_pos;
     }

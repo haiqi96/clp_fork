@@ -890,14 +890,33 @@ set(SOURCE_FILES_ir_decoder
         src/TimestampPattern.hpp
         src/ir_decoder/Decoder.cpp
         src/ir_decoder/Decoder.hpp
-    src/ParsedIRMessage.cpp
-    src/ParsedIRMessage.hpp
-    src/IRMessageParser.cpp
-    src/IRMessageParser.hpp
+        src/ParsedIRMessage.cpp
+        src/ParsedIRMessage.hpp
+        src/IRMessageParser.cpp
+        src/IRMessageParser.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
+        src/EncodedVariableInterpreter.cpp
+        src/EncodedVariableInterpreter.hpp
+        src/LogTypeDictionaryEntry.cpp
+        src/LogTypeDictionaryEntry.hpp
+        src/VariableDictionaryEntry.cpp
+        src/VariableDictionaryEntry.hpp
+        src/VariableDictionaryWriter.cpp
+        src/VariableDictionaryWriter.hpp
+        src/VariableDictionaryWriter.hpp
+        src/DictionaryReader.cpp
+        src/DictionaryReader.hpp
+        src/DictionaryEntry.cpp
+        src/DictionaryEntry.hpp
+        src/Query.cpp
+        src/Query.hpp
+        src/Utils.cpp
+        src/Utils.hpp
+        src/string_utils.cpp
+        src/string_utils.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/WriterInterface.cpp

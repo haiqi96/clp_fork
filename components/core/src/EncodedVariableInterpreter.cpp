@@ -125,43 +125,106 @@ bool EncodedVariableInterpreter::convert_string_to_representable_double_var (con
 
     // Encode into 64 bits with the following format (from MSB to LSB):
     // -  1 bit : is negative
-    // -  4 bits: # of decimal digits minus 1
-    //     - This format can represent doubles with between 1 and 16 decimal digits, so we use 4 bits and map the range [1, 16] to [0x0, 0xF]
-    // -  4 bits: position of the decimal from the right minus 1
-    //     - To see why the position is taken from the right, consider (1) "-123456789012345.6", (2) "-.1234567890123456", and (3) ".1234567890123456"
-    //         - For (1), the decimal point is at index 16 from the left and index 1 from the right.
-    //         - For (2), the decimal point is at index 1 from the left and index 16 from the right.
-    //         - For (3), the decimal point is at index 0 from the left and index 16 from the right.
-    //         - So if we take the decimal position from the left, it can range from 0 to 16 because of the negative sign. Whereas from the right, the
-    //           negative sign is inconsequential.
-    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     // -  1 bit : unused
-    // - 54 bits: The digits of the double without the decimal, as an integer
+    // - 54 bits: The digits of the float without the decimal, as an
+    //            integer
+    // -  4 bits: # of decimal digits minus 1
+    //     - This format can represent floats with between 1 and 16 decimal
+    //       digits, so we use 4 bits and map the range [1, 16] to
+    //       [0x0, 0xF]
+    // -  4 bits: position of the decimal from the right minus 1
+    //     - To see why the position is taken from the right, consider
+    //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
+    //       (3) ".1234567890123456"
+    //         - For (1), the decimal point is at index 16 from the left and
+    //           index 1 from the right.
+    //         - For (2), the decimal point is at index 1 from the left and
+    //           index 16 from the right.
+    //         - For (3), the decimal point is at index 0 from the left and
+    //           index 16 from the right.
+    //         - So if we take the decimal position from the left, it can
+    //           range from 0 to 16 because of the negative sign. Whereas
+    //           from the right, the negative sign is inconsequential.
+    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     uint64_t encoded_double = 0;
     if (is_negative) {
         encoded_double = 1;
     }
+    encoded_double <<= 55;  // 1 unused + 54 for digits of the float
+    encoded_double |= digits & ffi::cEightByteEncodedFloatDigitsBitMask;
     encoded_double <<= 4;
     encoded_double |= (num_digits - 1) & 0x0F;
     encoded_double <<= 4;
     encoded_double |= (decimal_point_pos - 1) & 0x0F;
-    encoded_double <<= 55;
-    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
     encoded_var = bit_cast<encoded_variable_t>(encoded_double);
 
     return true;
+}
+
+void EncodedVariableInterpreter::convert_compact_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value) {
+    uint64_t encoded_double;
+    static_assert(sizeof(encoded_double) == sizeof(encoded_var), "sizeof(encoded_double) != sizeof(encoded_var)");
+    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
+    std::memcpy(&encoded_double, &encoded_var, sizeof(encoded_var));
+
+    // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
+    uint8_t decimal_pos = (encoded_double & 0x07) + 1;
+    encoded_double >>= 3;
+    uint8_t num_digits = (encoded_double & 0x07) + 1;
+    encoded_double >>= 3;
+    uint64_t digits = encoded_double & 0x1FFFFFF;
+    encoded_double >>= 25;
+    bool is_negative = encoded_double > 0;
+
+    size_t value_length = num_digits + 1 + is_negative;
+    value.resize(value_length);
+    size_t num_chars_to_process = value_length;
+
+    // Add sign
+    if (is_negative) {
+        value[0] = '-';
+        --num_chars_to_process;
+    }
+
+    // Decode until the decimal or the non-zero digits are exhausted
+    size_t pos = value_length - 1;
+    for (; pos > (value_length - 1 - decimal_pos) && digits > 0; --pos) {
+        value[pos] = (char)('0' + (digits % 10));
+        digits /= 10;
+        --num_chars_to_process;
+    }
+
+    if (digits > 0) {
+        // Skip decimal since it's added at the end
+        --pos;
+        --num_chars_to_process;
+
+        while (digits > 0) {
+            value[pos--] = (char)('0' + (digits % 10));
+            digits /= 10;
+            --num_chars_to_process;
+        }
+    }
+
+    // Add remaining zeros
+    for (; num_chars_to_process > 0; --num_chars_to_process) {
+        value[pos--] = '0';
+    }
+
+    // Add decimal
+    value[value_length - 1 - decimal_pos] = '.';
 }
 
 void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_variable_t encoded_var, string& value) {
     auto encoded_double = bit_cast<uint64_t>(encoded_var);
 
     // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
-    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
-    encoded_double >>= 55;
     uint8_t decimal_pos = (encoded_double & 0x0F) + 1;
     encoded_double >>= 4;
     uint8_t num_digits = (encoded_double & 0x0F) + 1;
     encoded_double >>= 4;
+    uint64_t digits = encoded_double & ffi::cEightByteEncodedFloatDigitsBitMask;
+    encoded_double >>= 55;
     bool is_negative = encoded_double > 0;
 
     size_t value_length = num_digits + 1 + is_negative;
@@ -204,45 +267,31 @@ void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_varia
 }
 
 encoded_variable_t
-EncodedVariableInterpreter::convert_ir_float_to_clp_double (encoded_variable_t ir_var, bool compact_encoding)
+EncodedVariableInterpreter::convert_compact_ir_float_to_clp_double (encoded_variable_t ir_var)
 {
     auto encoded_float = bit_cast<uint64_t>(ir_var);
 
-    size_t decimal_pos;
-    size_t num_digits;
-    size_t digits;
-    bool is_negative;
-    if(compact_encoding) {
-        // Decode according to the format described in encode_string_as_float_compact_var
-        decimal_pos = (encoded_float & 0x07) + 1;
-        encoded_float >>= 3;
-        num_digits = (encoded_float & 0x07) + 1;
-        encoded_float >>= 3;
-        digits = encoded_float & ffi::cFourByteEncodedFloatDigitsBitMask;
-        encoded_float >>= 25;
-        is_negative = encoded_float > 0;
-    } else {
-        // Decode according to the format described in encode_float_string
-        decimal_pos = (encoded_float & 0x0F) + 1;
-        encoded_float >>= 4;
-        num_digits = (encoded_float & 0x0F) + 1;
-        encoded_float >>= 4;
-        digits = encoded_float & ffi::cEightByteEncodedFloatDigitsBitMask;
-        encoded_float >>= 55;
-        is_negative = encoded_float > 0;
-    }
+    // Decode according to the format described in encode_string_as_float_compact_var
+    size_t decimal_pos = (encoded_float & 0x07) + 1;
+    encoded_float >>= 3;
+    size_t num_digits = (encoded_float & 0x07) + 1;
+    encoded_float >>= 3;
+    size_t digits = encoded_float & ffi::cFourByteEncodedFloatDigitsBitMask;
+    encoded_float >>= 25;
+    bool is_negative = encoded_float > 0;
 
     // encode again.
     uint64_t encoded_double = 0;
     if (is_negative) {
         encoded_double = 1;
     }
+    encoded_double <<= 55;  // 1 unused + 54 for digits of the float
+    encoded_double |= digits & ffi::cEightByteEncodedFloatDigitsBitMask;
     encoded_double <<= 4;
     encoded_double |= (num_digits - 1) & 0x0F;
     encoded_double <<= 4;
     encoded_double |= (decimal_pos - 1) & 0x0F;
-    encoded_double <<= 55;
-    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
+
     return bit_cast<encoded_variable_t>(encoded_double);
 }
 
@@ -260,13 +309,12 @@ bool EncodedVariableInterpreter::convert_clp_double_to_compact_ir_float (
     auto encoded_double = bit_cast<uint64_t>(clp_double);
 
     // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
-    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
-    encoded_double >>= 55;
-    // here we don't need to plus 1
     uint8_t decimal_pos = (encoded_double & 0x0F);
     encoded_double >>= 4;
     uint8_t num_digits = (encoded_double & 0x0F);
     encoded_double >>= 4;
+    uint64_t digits = encoded_double & ffi::cEightByteEncodedFloatDigitsBitMask;
+    encoded_double >>= 55;
     bool is_negative = encoded_double > 0;
 
     if(decimal_pos > 0x07 || num_digits > 0x07 || digits > ffi::cFourByteEncodedFloatDigitsBitMask) {
@@ -301,16 +349,13 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
     std::string logtype_str = message.get_log_type();
     std::string var_str;
     for (auto pos : var_pos) {
-        char placeholder = logtype_str.at(pos);
-        if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
-            encoded_vars.push_back(convert_ir_float_to_clp_double(ir_encoded_vars.at(ir_encoded_var_ix++), message.is_compact()));
-            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
-        } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Integer)) {
-            encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
-            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer);
-        } else {
-            var_str = dictionary_vars.at(ir_dictionary_var_ix++);
-            if(message.is_compact()) {
+        const char placeholder = logtype_str.at(pos);
+        if (message.is_compact()) {
+            if (placeholder == enum_to_underlying_type(VariablePlaceholder::Integer)) {
+                encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
+            } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
+                encoded_vars.push_back(convert_compact_ir_float_to_clp_double(ir_encoded_vars.at(ir_encoded_var_ix++)));
+            } else {
                 encoded_variable_t converted_var;
                 if(convert_string_to_representable_integer_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
@@ -319,18 +364,24 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
                     encoded_vars.push_back(converted_var);
                     logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
                 } else {
+                    var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                     variable_dictionary_id_t id;
                     var_dict.add_entry(var_str, id);
                     encoded_vars.push_back(encode_var_dict_id(id));
                     var_ids.push_back(id);
                     logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
                 }
-            } else {
+            }
+        } else {
+            if(placeholder == enum_to_underlying_type(VariablePlaceholder::Dictionary)) {
+                var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                 variable_dictionary_id_t id;
                 var_dict.add_entry(var_str, id);
                 encoded_vars.push_back(encode_var_dict_id(id));
                 var_ids.push_back(id);
                 logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
+            } else {
+                encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
             }
         }
     }

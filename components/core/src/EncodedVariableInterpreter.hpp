@@ -72,9 +72,16 @@ public:
     static void convert_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value);
 
     /**
+     * Converts the given compact encoded double into a string
+     * @param encoded_var
+     * @param value
+     */
+    static void convert_compact_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value);
+
+    /**
      * Converts ir encoded float into clp-encoded double
      */
-    static encoded_variable_t convert_ir_float_to_clp_double (encoded_variable_t ir_var, bool compact_encoding);
+    static encoded_variable_t convert_compact_ir_float_to_clp_double (encoded_variable_t ir_var);
 
     /**
      * Converts clp encoded data to compact ir data

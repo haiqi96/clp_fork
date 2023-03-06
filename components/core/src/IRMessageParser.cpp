@@ -10,10 +10,6 @@
 #include "ffi/ir_stream/protocol_constants.hpp"
 #include "ffi/ir_stream/byteswap.hpp"
 
-constexpr int VAR_STR_LEN_UNSIGNED_BYTE = 0x11;
-constexpr int VAR_STR_LEN_UNSIGNED_SHORT = 0x12;
-constexpr int VAR_STR_LEN_SIGNED_INT = 0x13;
-
 bool IRMessageParser::is_ir_encoded(const char* buf, bool& is_compacted) {
     bool is_ir_encoded = false;
     if(0 == memcmp(ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber,
@@ -207,7 +203,6 @@ bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, Parsed
     }
 
     while(is_compact_variable_tag(tag_byte)) {
-
         if (tag_byte == ffi::ir_stream::cProtocol::Payload::VarFourByteEncoding) {
             encoded_variable_t var_compact = bit_cast<int32_t>(read_unsigned(reader));
             message.append_encoded_vars(var_compact);
