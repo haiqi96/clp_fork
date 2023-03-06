@@ -304,33 +304,33 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
         char placeholder = logtype_str.at(pos);
         if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
             encoded_vars.push_back(convert_ir_float_to_clp_double(ir_encoded_vars.at(ir_encoded_var_ix++), message.is_compact()));
-            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Double);
+            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
         } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Integer)) {
             encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
-            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+            logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer);
         } else {
             var_str = dictionary_vars.at(ir_dictionary_var_ix++);
             if(message.is_compact()) {
                 encoded_variable_t converted_var;
                 if(convert_string_to_representable_integer_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer);
                 } else if (convert_string_to_representable_double_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Double);
+                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
                 } else {
                     variable_dictionary_id_t id;
                     var_dict.add_entry(var_str, id);
                     encoded_vars.push_back(encode_var_dict_id(id));
                     var_ids.push_back(id);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
                 }
             } else {
                 variable_dictionary_id_t id;
                 var_dict.add_entry(var_str, id);
                 encoded_vars.push_back(encode_var_dict_id(id));
                 var_ids.push_back(id);
-                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::NonDouble);
+                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
             }
         }
     }
@@ -416,10 +416,10 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
                     throw;
                 }
             }
-            else {
-                std::cout << "can't convert int: " << var_str << std::endl;
-            }
-            logtype_dict_entry.add_non_double_var();
+//            else {
+//                std::cout << "can't convert int: " << var_str << std::endl;
+//            }
+            logtype_dict_entry.add_int_var();
         } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
             uint32_t ir_float;
             bool conversion_success = convert_clp_double_to_compact_ir_float(encoded_var, ir_float);
@@ -431,10 +431,10 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
                     throw;
                 }
             }
-            else {
-                std::cout << "can't convert float: " << var_str << std::endl;
-            }
-            logtype_dict_entry.add_double_var();
+//            else {
+//                std::cout << "can't convert float: " << var_str << std::endl;
+//            }
+            logtype_dict_entry.add_float_var();
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
             variable_dictionary_id_t id;
@@ -442,7 +442,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
             encoded_var = encode_var_dict_id(id);
             var_ids.push_back(id);
 
-            logtype_dict_entry.add_non_double_var();
+            logtype_dict_entry.add_dictionary_var();
         }
 
         encoded_vars.push_back(encoded_var);
@@ -471,17 +471,14 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
         // Add the constant that's between the last variable and this one
         decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
 
-        if (LogTypeDictionaryEntry::VarDelim::NonDouble == var_delim) {
-            if (!is_var_dict_id(encoded_vars[i])) {
-                decompressed_msg += std::to_string(encoded_vars[i]);
-            } else {
-                auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
-                decompressed_msg += var_dict.get_value(var_dict_id);
-            }
-        } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
+        if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
+            decompressed_msg += std::to_string(encoded_vars[i]);
+        } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
             convert_encoded_double_to_string(encoded_vars[i], double_str);
-
             decompressed_msg += double_str;
+        } else {
+            auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
+            decompressed_msg += var_dict.get_value(var_dict_id);
         }
         // Move past the variable delimiter
         constant_begin_pos = var_position + 1;
@@ -504,10 +501,10 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
 
     encoded_variable_t encoded_var;
     if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_non_double_var(logtype);
+        LogTypeDictionaryEntry::add_int_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_double_var(logtype);
+        LogTypeDictionaryEntry::add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
         auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
@@ -517,7 +514,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
         }
         encoded_var = encode_var_dict_id(entry->get_id());
 
-        LogTypeDictionaryEntry::add_non_double_var(logtype);
+        LogTypeDictionaryEntry::add_dict_var(logtype);
         sub_query.add_dict_var(encoded_var, entry);
     }
 
