@@ -57,7 +57,7 @@ namespace streaming_archive::writer {
         ++m_num_messages;
         m_num_variables += encoded_vars.size();
 
-        if (timestamp < m_begin_ts) {
+        if (timestamp < m_begin_ts && 0 != timestamp) {
             m_begin_ts = timestamp;
         }
         if (timestamp > m_end_ts) {

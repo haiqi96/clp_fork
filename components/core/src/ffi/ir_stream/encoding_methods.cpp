@@ -266,6 +266,9 @@ namespace ffi::ir_stream {
             return encode_metadata(metadata_json, ir_buf);
         }
 
+        // TODO: the API only takes timestamp delta but it is hard to know when a timestamp is 0
+        // a hack can be checking if ts delta > 32bit max.. but since we might need to refactor ffi
+        // I will leave this for later.
         bool encode_message (epoch_time_ms_t timestamp_delta, string_view message, string& logtype,
                              vector<int8_t>& ir_buf)
         {

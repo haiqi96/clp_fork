@@ -46,6 +46,7 @@ namespace ffi::ir_stream::cProtocol {
         constexpr int8_t TimestampDeltaByte = 0x31;
         constexpr int8_t TimestampDeltaShort = 0x32;
         constexpr int8_t TimestampDeltaInt = 0x33;
+        constexpr int8_t TimestampNullByte = 0x3F;
     }
 
     constexpr int8_t Eof = 0x0;

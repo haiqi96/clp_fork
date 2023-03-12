@@ -198,16 +198,15 @@ bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, Parsed
 
     int8_t tag_byte;
     tag_byte = read_byte(reader);
-    if(tag_byte == ffi::ir_stream::cProtocol::Eof) {
+    if (tag_byte == ffi::ir_stream::cProtocol::Eof) {
         return false;
     }
 
-    while(is_compact_variable_tag(tag_byte)) {
+    while (is_compact_variable_tag(tag_byte)) {
         if (tag_byte == ffi::ir_stream::cProtocol::Payload::VarFourByteEncoding) {
             encoded_variable_t var_compact = bit_cast<int32_t>(read_unsigned(reader));
             message.append_encoded_vars(var_compact);
-        }
-        else {
+        } else {
             // else case, variables are basically strings
             parse_dictionary_var(reader, message, tag_byte);
         }
@@ -219,20 +218,25 @@ bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, Parsed
     tag_byte = read_byte(reader);
 
     // handle timestamp
-    epochtime_t timestamp_delta_value = 0;
-    if(tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaByte) {
-        timestamp_delta_value = bit_cast<int8_t>(read_byte(reader));
-    } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaShort) {
-        timestamp_delta_value = bit_cast<int16_t>(read_short(reader));
-    } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaInt) {
-        timestamp_delta_value = bit_cast<int32_t>(read_unsigned(reader));
-    } else {
-        SPDLOG_ERROR("Unexpected timestamp tag {}", tag_byte);
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampNullByte) {
+        message.set_time(0);
     }
-    epochtime_t timestamp = timestamp_delta_value + m_last_timestamp;
-    m_last_timestamp = timestamp;
-    message.set_time(timestamp);
+    else {
+        epochtime_t timestamp_delta_value;
+        if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaByte) {
+            timestamp_delta_value = bit_cast<int8_t>(read_byte(reader));
+        } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaShort) {
+            timestamp_delta_value = bit_cast<int16_t>(read_short(reader));
+        } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaInt) {
+            timestamp_delta_value = bit_cast<int32_t>(read_unsigned(reader));
+        } else {
+            SPDLOG_ERROR("Unexpected timestamp tag {}", tag_byte);
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+        epochtime_t timestamp = timestamp_delta_value + m_last_timestamp;
+        m_last_timestamp = timestamp;
+        message.set_time(timestamp);
+    }
     return true;
 }
 

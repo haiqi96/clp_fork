@@ -42,6 +42,7 @@ namespace clp {
         void write_logtype(const std::string& logtype_str);
         void write_timestamp(epochtime_t ts);
 
+        void write_null_ts_tag();
 
         template <typename integer_t> void encode_int (integer_t value);
 

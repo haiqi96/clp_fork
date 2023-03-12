@@ -116,13 +116,7 @@ namespace clp {
 
         // Open output file
         m_ir_decompressor.open(temp_output_path.string(), open_mode);
-        epochtime_t reference_ts = file_metadata_ix.get_begin_ts();
-        if(reference_ts == 0) {
-            std::cout << "Skipping files with ts = 0 :" << file_path << std::endl;
-            m_ir_decompressor.close();
-            archive_reader.close_file(m_encoded_file);
-            return true;
-        }
+        epochtime_t reference_ts = m_encoded_file.get_begin_ts();
         if(!is_new_file) {
             SPDLOG_ERROR("Be careful of splitted-file {}", file_path);
             m_ir_decompressor.close();

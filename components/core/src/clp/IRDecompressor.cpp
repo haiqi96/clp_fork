@@ -35,11 +35,18 @@ namespace clp {
         }
         write_logtype(ir_msg.get_log_type());
 
-        epochtime_t timestamp_delta = ir_msg.get_timestamp() - last_ts;
-        last_ts = ir_msg.get_timestamp();
-        write_timestamp(timestamp_delta);
+        epochtime_t msg_timestamp = ir_msg.get_timestamp();
+        if (0 != msg_timestamp) {
+            epochtime_t timestamp_delta = msg_timestamp - last_ts;
+            last_ts = ir_msg.get_timestamp();
+            write_timestamp(timestamp_delta);
+        } else {
+            write_null_ts_tag();
+        }
+    }
 
-
+    void IRDecompressor::write_null_ts_tag() {
+        m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampNullByte);
     }
 
     void IRDecompressor::write_timestamp (epochtime_t timestamp_delta) {
