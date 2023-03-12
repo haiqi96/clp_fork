@@ -68,8 +68,6 @@ static size_t get_logtype_length (ReaderInterface &reader, uint8_t tag_byte) {
     }
 }
 
-
-
 uint8_t IRMessageParser::read_byte (ReaderInterface &reader) {
     uint8_t value = 0;
     size_t num_bytes_to_read = 1;
@@ -81,6 +79,7 @@ uint8_t IRMessageParser::read_byte (ReaderInterface &reader) {
     }
     return value;
 }
+
 uint16_t IRMessageParser::read_short (ReaderInterface &reader) {
     uint16_t value;
     size_t num_bytes_to_read = 2;
@@ -92,6 +91,7 @@ uint16_t IRMessageParser::read_short (ReaderInterface &reader) {
     }
     return __builtin_bswap16 (value);
 }
+
 uint32_t IRMessageParser::read_unsigned (ReaderInterface &reader) {
     uint32_t value;
     size_t num_bytes_to_read = 4;
@@ -103,6 +103,7 @@ uint32_t IRMessageParser::read_unsigned (ReaderInterface &reader) {
     }
     return __builtin_bswap32 (value);
 }
+
 uint64_t IRMessageParser::read_long (ReaderInterface &reader) {
     uint64_t value;
     size_t num_bytes_to_read = 8;
@@ -153,7 +154,7 @@ void IRMessageParser::parse_dictionary_var(ReaderInterface &reader, ParsedIRMess
     } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::VarStrLenUShort) {
         length = read_short(reader);
     } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::VarStrLenInt){
-        length = read_unsigned(reader);
+        length = bit_cast<int32_t>(read_unsigned(reader));
     } else {
         SPDLOG_ERROR("Unexpected tag byte");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -199,7 +200,7 @@ void IRMessageParser::parse_log_type(ReaderInterface &reader, ParsedIRMessage &m
 bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, ParsedIRMessage &message) {
     message.clear_except_ts_patt();
 
-    uint8_t tag_byte;
+    int8_t tag_byte;
     tag_byte = read_byte(reader);
     if(tag_byte == ffi::ir_stream::cProtocol::Eof) {
         return false;
@@ -208,7 +209,7 @@ bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, Parsed
     while(is_compact_variable_tag(tag_byte)) {
 
         if (tag_byte == ffi::ir_stream::cProtocol::Payload::VarFourByteEncoding) {
-            encoded_variable_t var_compact = read_unsigned(reader);
+            encoded_variable_t var_compact = bit_cast<int32_t>(read_unsigned(reader));
             message.append_encoded_vars(var_compact);
         }
         else {
@@ -225,11 +226,11 @@ bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, Parsed
     // handle timestamp
     epochtime_t timestamp_delta_value = 0;
     if(tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaByte) {
-        timestamp_delta_value = read_byte(reader);
+        timestamp_delta_value = bit_cast<int8_t>(read_byte(reader));
     } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaShort) {
-        timestamp_delta_value = read_short(reader);
+        timestamp_delta_value = bit_cast<int16_t>(read_short(reader));
     } else if (tag_byte == ffi::ir_stream::cProtocol::Payload::TimestampDeltaInt) {
-        timestamp_delta_value = read_unsigned(reader);
+        timestamp_delta_value = bit_cast<int32_t>(read_unsigned(reader));
     } else {
         SPDLOG_ERROR("Unexpected timestamp tag {}", tag_byte);
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -245,7 +246,7 @@ bool IRMessageParser::parse_next_std_message(ReaderInterface &reader, ParsedIRMe
 
     message.clear_except_ts_patt();
 
-    uint8_t tag_byte;
+    int8_t tag_byte;
     tag_byte = read_byte(reader);
     if(tag_byte == ffi::ir_stream::cProtocol::Eof) {
         return false;
@@ -289,7 +290,7 @@ bool IRMessageParser::parse_next_message (ReaderInterface& reader, ParsedIRMessa
 
 bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &message, bool is_compact_encoding) {
 
-    uint8_t encoding_tag;
+    int8_t encoding_tag;
     encoding_tag = read_byte(reader);
     // Check the metadata byte
     if(encoding_tag != ffi::ir_stream::cProtocol::Metadata::EncodingJson) {
@@ -297,7 +298,7 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
         return false;
     }
 
-    uint8_t length_tag = read_byte(reader);
+    int8_t length_tag = read_byte(reader);
 
     unsigned int metadata_length;
     switch(length_tag) {
@@ -333,7 +334,7 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
         std::string reference_timestamp =
                 metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey);
         m_last_timestamp = boost::lexical_cast<epochtime_t>(reference_timestamp);
-        time_stamp_string = "%Y-%m-%dT%H:%M:%S.%3Z";
+        time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
     }
     message.set_ts_pattern(0, time_stamp_string);
 
