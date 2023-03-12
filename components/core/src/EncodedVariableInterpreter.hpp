@@ -11,6 +11,7 @@
 #include "VariableDictionaryReader.hpp"
 #include "VariableDictionaryWriter.hpp"
 #include "ParsedIRMessage.hpp"
+#include "streaming_archive/reader/IRMessage.hpp"
 
 /**
  * Class to parse and encode strings into encoded variables and to interpret encoded variables back into strings. An encoded variable is one of:
@@ -123,6 +124,17 @@ public:
      */
     static bool decode_variables_into_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
                                                const std::vector<encoded_variable_t>& encoded_vars, std::string& decompressed_msg);
+
+    /**
+     * Decodes all variables and decompresses them into a message
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param encoded_vars
+     * @param decompressed_msg
+     * @return true if successful, false otherwise
+     */
+    static bool decode_variables_into_ir_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
+                                                  const std::vector<encoded_variable_t>& encoded_vars, streaming_archive::reader::IRMessage& ir_msg);
 
     /**
      * Encodes a string-form variable, and if it is dictionary variable, searches for its ID in the given variable dictionary

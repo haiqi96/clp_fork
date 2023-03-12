@@ -26,6 +26,8 @@ using std::string;
 using std::unique_ptr;
 using std::unordered_set;
 
+//#define DECOMPRESS decompress_to_ir
+#define DECOMPRESS decompress_file
 namespace clp {
     bool decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
         ErrorCode error_code;
@@ -93,7 +95,7 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
-                        if (false == file_decompressor.decompress_file(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
+                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
                                                                        temp_path_to_final_path))
                         {
                             return false;
@@ -121,7 +123,7 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
-                        if (false == file_decompressor.decompress_file(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
+                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
                                                                        temp_path_to_final_path))
                         {
                             return false;
@@ -151,7 +153,7 @@ namespace clp {
                         }
 
                         // Decompress file
-                        if (false == file_decompressor.decompress_file(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
+                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
                                                                        temp_path_to_final_path))
                         {
                             return false;

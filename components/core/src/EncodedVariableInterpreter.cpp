@@ -356,6 +356,7 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
             } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
                 encoded_vars.push_back(convert_compact_ir_float_to_clp_double(ir_encoded_vars.at(ir_encoded_var_ix++)));
             } else {
+                var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                 encoded_variable_t converted_var;
                 if(convert_string_to_representable_integer_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
@@ -364,7 +365,6 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
                     encoded_vars.push_back(converted_var);
                     logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
                 } else {
-                    var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                     variable_dictionary_id_t id;
                     var_dict.add_entry(var_str, id);
                     encoded_vars.push_back(encode_var_dict_id(id));
@@ -498,6 +498,57 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
 
         encoded_vars.push_back(encoded_var);
     }
+}
+
+bool EncodedVariableInterpreter::decode_variables_into_ir_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
+                                                                   const vector<encoded_variable_t>& encoded_vars, streaming_archive::reader::IRMessage& ir_msg)
+{
+    ir_msg.clear();
+    size_t num_vars_in_logtype = logtype_dict_entry.get_num_vars();
+
+    // Ensure the number of variables in the logtype matches the number of encoded variables given
+    const auto& logtype_value = logtype_dict_entry.get_value();
+    if (num_vars_in_logtype != encoded_vars.size()) {
+        SPDLOG_ERROR("EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given for decoding.", logtype_value.c_str(),
+                     num_vars_in_logtype, encoded_vars.size());
+        return false;
+    }
+    std::string converted_logtype_str;
+    LogTypeDictionaryEntry::VarDelim var_delim;
+    size_t constant_begin_pos = 0;
+    string double_str;
+    for (size_t i = 0; i < num_vars_in_logtype; ++i) {
+        size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
+        encoded_variable_t encoded_var = encoded_vars[i];
+        // Add the constant that's between the last variable and this one
+        ir_msg.logtype_append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+
+        if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
+            if(INT32_MIN <= encoded_var && encoded_var <= INT32_MAX) {
+                ir_msg.append_int_vars(encoded_var);
+            } else {
+                ir_msg.append_dict_vars(std::to_string(encoded_var));
+            }
+        } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
+            uint32_t ir_float;
+            if(convert_clp_double_to_compact_ir_float(encoded_var, ir_float)) {
+                ir_msg.append_float_vars(ir_float);
+            } else {
+                convert_encoded_double_to_string(encoded_vars[i], double_str);
+                ir_msg.append_dict_vars(double_str);
+            }
+        } else {
+            auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
+            ir_msg.append_dict_vars(var_dict.get_value(var_dict_id));
+        }
+        // Move past the variable delimiter
+        constant_begin_pos = var_position + 1;
+    }
+    // Append remainder of logtype, if any
+    if (constant_begin_pos < logtype_value.length()) {
+        ir_msg.logtype_append(logtype_value, constant_begin_pos, string::npos);
+    }
+    return true;
 }
 
 bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,

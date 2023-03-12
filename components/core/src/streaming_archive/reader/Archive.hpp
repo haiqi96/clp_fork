@@ -19,6 +19,7 @@
 #include "../CLPMetadataDB.hpp"
 #include "File.hpp"
 #include "Message.hpp"
+#include "IRMessage.hpp"
 
 namespace streaming_archive { namespace reader {
     class Archive {
@@ -103,6 +104,14 @@ namespace streaming_archive { namespace reader {
          * @throw TimestampPattern::OperationFailed if failed to insert timestamp
          */
         bool decompress_message (File& file, const Message& compressed_msg, std::string& decompressed_msg);
+
+        /**
+         * Decompresses a given message from a given file
+         * @param compressed_msg
+         * @param ir_msg
+         * @return true if message was successfully decompressed, false otherwise
+         */
+        bool ir_encode_message (const Message& compressed_msg, IRMessage& ir_msg);
 
         void decompress_empty_directories (const std::string& output_dir);
 
