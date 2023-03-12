@@ -14,7 +14,6 @@ namespace clp {
 
     void IRDecompressor::close () {
         m_decompressed_file_writer.write_char(char(ffi::ir_stream::cProtocol::Eof));
-        m_decompressed_file_writer.flush();
         m_decompressed_file_writer.close();
         last_ts = 0;
     }
