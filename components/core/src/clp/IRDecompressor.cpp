@@ -10,10 +10,12 @@
 namespace clp {
     void IRDecompressor::open (const std::string& path, FileWriter::OpenMode open_mode) {
         m_decompressed_file_writer.open(path, open_mode);
+        m_zstd_ir_compressor.open(m_decompressed_file_writer);
     }
 
     void IRDecompressor::close () {
-        m_decompressed_file_writer.write_char(char(ffi::ir_stream::cProtocol::Eof));
+        m_zstd_ir_compressor.write_char(char(ffi::ir_stream::cProtocol::Eof));
+        m_zstd_ir_compressor.close();
         m_decompressed_file_writer.close();
         last_ts = 0;
     }
@@ -46,19 +48,19 @@ namespace clp {
     }
 
     void IRDecompressor::write_null_ts_tag() {
-        m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampNullByte);
+        m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampNullByte);
     }
 
     void IRDecompressor::write_timestamp (epochtime_t timestamp_delta) {
         // Encode timestamp delta
         if (INT8_MIN <= timestamp_delta && timestamp_delta <= INT8_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaByte);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaByte);
             encode_int(static_cast<int8_t>(timestamp_delta));
         } else if (INT16_MIN <= timestamp_delta && timestamp_delta <= INT16_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaShort);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaShort);
             encode_int(static_cast<int16_t>(timestamp_delta));
         } else if (INT32_MIN <= timestamp_delta && timestamp_delta <= INT32_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaInt);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::TimestampDeltaInt);
             encode_int(static_cast<int32_t>(timestamp_delta));
         } else {
             SPDLOG_ERROR("timestamp delta out of bound");
@@ -69,42 +71,42 @@ namespace clp {
     void IRDecompressor::write_logtype (const std::string& logtype) {
         auto length = logtype.length();
         if (length <= UINT8_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenUByte);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenUByte);
             encode_int(static_cast<uint8_t>(length));
         } else if (length <= UINT16_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenUShort);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenUShort);
             encode_int(static_cast<uint16_t>(length));
         } else if (length <= INT32_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenInt);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::LogtypeStrLenInt);
             encode_int(static_cast<int32_t>(length));
         } else {
             SPDLOG_ERROR("Logtype entry length out of bound");
             throw;
         }
-        m_decompressed_file_writer.write_string(logtype);
+        m_zstd_ir_compressor.write_string(logtype);
     }
 
     void IRDecompressor::write_encoded_var (encoded_variable_t encoded_var) {
-        m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::VarFourByteEncoding);
+        m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::VarFourByteEncoding);
         encode_int(static_cast<int32_t>(encoded_var));
     }
 
     void IRDecompressor::write_dict_var (const std::string& dict_var) {
         auto length = dict_var.length();
         if (length <= UINT8_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenUByte);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenUByte);
             encode_int(static_cast<uint8_t>(length));
         } else if (length <= UINT16_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenUShort);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenUShort);
             encode_int(static_cast<uint16_t>(length));
         } else if (length <= INT32_MAX) {
-            m_decompressed_file_writer.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenInt);
+            m_zstd_ir_compressor.write_char((char)ffi::ir_stream::cProtocol::Payload::VarStrLenInt);
             encode_int(static_cast<int32_t>(length));
         } else {
             SPDLOG_ERROR("Dictionary entry length out of bound");
             throw;
         }
-        m_decompressed_file_writer.write_string(dict_var);
+        m_zstd_ir_compressor.write_string(dict_var);
     }
 
     template <typename integer_t>
@@ -121,7 +123,7 @@ namespace clp {
             value_big_endian = bswap_64(value);
         }
         auto data = reinterpret_cast<char*>(&value_big_endian);
-        m_decompressed_file_writer.write(data, sizeof(value));
+        m_zstd_ir_compressor.write(data, sizeof(value));
     }
 
     bool IRDecompressor::write_premable (epochtime_t reference_ts,
@@ -131,7 +133,7 @@ namespace clp {
         std::vector<int8_t> ir_buf;
         bool result = ffi::ir_stream::four_byte_encoding::encode_preamble(timestamp_pattern, timestamp_pattern_syntax, timezone, reference_ts, ir_buf);
         if(result) {
-            m_decompressed_file_writer.write(reinterpret_cast<const char*>(ir_buf.data()),
+            m_zstd_ir_compressor.write(reinterpret_cast<const char*>(ir_buf.data()),
                                              ir_buf.size());
         }
         last_ts = reference_ts;

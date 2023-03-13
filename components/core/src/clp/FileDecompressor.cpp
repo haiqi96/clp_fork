@@ -88,7 +88,9 @@ namespace clp {
         std::string file_path;
         file_metadata_ix.get_path(file_path);
         boost::filesystem::path final_output_path = output_dir;
-        final_output_path /= m_encoded_file.get_orig_path();
+        // TODO: this doesn't really fix the naming problem
+        // because the duplicate ID will be added after .clp.zst
+        final_output_path /= m_encoded_file.get_orig_path() + ".clp.zst";
 
         boost::filesystem::path temp_output_path = output_dir;
         FileWriter::OpenMode open_mode;

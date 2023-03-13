@@ -26,8 +26,8 @@ using std::string;
 using std::unique_ptr;
 using std::unordered_set;
 
-//#define DECOMPRESS decompress_to_ir
-#define DECOMPRESS decompress_file
+#define DECOMPRESS decompress_to_ir
+//#define DECOMPRESS decompress_file
 namespace clp {
     bool decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
         ErrorCode error_code;

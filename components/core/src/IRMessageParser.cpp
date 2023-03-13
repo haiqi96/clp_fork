@@ -323,7 +323,7 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
     auto metadata_json = nlohmann::json::parse(buffer_str);
     // TODO: LET IT USE THE TRUE TIMESTAMP FORMAT
     // std::string time_stamp_string = j3.at("TIMESTAMP_PATTERN");
-    std::string time_stamp_string = "%y/%m/%d %H:%M:%S";
+    std::string time_stamp_string;
     m_timezone = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
     m_version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
     if (m_version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
@@ -333,9 +333,15 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
         std::string reference_timestamp =
                 metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey);
         m_last_timestamp = boost::lexical_cast<epochtime_t>(reference_timestamp);
-        time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
+        // if reference_timestamp, the file only contains messages without timestamp
+        if (0 != m_last_timestamp) {
+            time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
+            message.set_ts_pattern(0, time_stamp_string);
+        }
+    } else {
+        time_stamp_string = "%y/%m/%d %H:%M:%S";
+        message.set_ts_pattern(0, time_stamp_string);
     }
-    message.set_ts_pattern(0, time_stamp_string);
 
     m_compact_encoding = is_compact_encoding;
     message.set_compact(is_compact_encoding);

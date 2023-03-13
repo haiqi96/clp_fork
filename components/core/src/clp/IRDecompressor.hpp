@@ -9,6 +9,7 @@
 #include "../Defs.h"
 #include "../ffi/ir_stream/protocol_constants.hpp"
 #include "../streaming_archive/reader/IRMessage.hpp"
+#include "../streaming_compression/zstd/Compressor.hpp"
 
 namespace clp {
     class IRDecompressor {
@@ -47,6 +48,8 @@ namespace clp {
         template <typename integer_t> void encode_int (integer_t value);
 
         void write_magic_number();
+
+        streaming_compression::zstd::Compressor m_zstd_ir_compressor;
         FileWriter m_decompressed_file_writer;
         epochtime_t last_ts;
     };

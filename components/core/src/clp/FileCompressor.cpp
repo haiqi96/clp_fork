@@ -308,6 +308,13 @@ namespace clp {
             if (IRMessageParser::is_ir_encoded(m_clp_validation_buf, is_compact)) {
                 auto boost_path_for_compression =
                         parent_boost_path / m_libarchive_reader.get_path();
+                // TODO. a hack to ensure file names ending with "clp.zst" have
+                // the proper decompressed name
+                if (boost_path_for_compression.has_stem()) {
+                    auto filename = boost_path_for_compression.stem();
+                    boost_path_for_compression = boost_path_for_compression.parent_path();
+                    boost_path_for_compression /= filename;
+                }
                 encode_ir(target_data_size_of_dicts, archive_user_config,
                           target_encoded_file_size,
                           boost_path_for_compression.string(),
