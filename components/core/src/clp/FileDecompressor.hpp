@@ -22,7 +22,9 @@ namespace clp {
         bool decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
                               streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
         bool decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
-                               streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
+                               streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
+                               std::unordered_map<std::string, epochtime_t>& file_to_last_ts);
+        IRDecompressor m_ir_decompressor;
     private:
         // Variables
         FileWriter m_decompressed_file_writer;
@@ -31,7 +33,6 @@ namespace clp {
         std::string m_decompressed_message;
 
         streaming_archive::reader::IRMessage m_ir_message;
-        IRDecompressor m_ir_decompressor;
     };
 };
 

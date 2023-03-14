@@ -72,7 +72,8 @@ namespace clp {
 
 
     bool FileDecompressor::decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const string& output_dir,
-                                             streaming_archive::reader::Archive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
+                                             streaming_archive::reader::Archive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path,
+                                             std::unordered_map<string, epochtime_t>& file_to_last_ts)
     {
         // Open compressed file
         auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
@@ -95,7 +96,6 @@ namespace clp {
         boost::filesystem::path temp_output_path = output_dir;
         FileWriter::OpenMode open_mode;
         boost::system::error_code boost_error_code;
-        bool is_new_file = true;
         if (m_encoded_file.is_split() || boost::filesystem::exists(final_output_path, boost_error_code)) {
             temp_output_path /= m_encoded_file.get_orig_file_id_as_string();
             open_mode = FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_APPENDING;
@@ -103,7 +103,6 @@ namespace clp {
             if (0 == temp_path_to_final_path.count(temp_output_path_string)) {
                 temp_path_to_final_path[temp_output_path_string] = final_output_path.string();
             }
-            is_new_file = false;
         } else {
             temp_output_path = final_output_path;
             open_mode = FileWriter::OpenMode::CREATE_FOR_WRITING;
@@ -118,14 +117,15 @@ namespace clp {
 
         // Open output file
         m_ir_decompressor.open(temp_output_path.string(), open_mode);
-        epochtime_t reference_ts = m_encoded_file.get_begin_ts();
-        if(!is_new_file) {
-            SPDLOG_ERROR("Be careful of splitted-file {}", file_path);
-            m_ir_decompressor.close();
-            archive_reader.close_file(m_encoded_file);
-            return true;
+
+        epochtime_t reference_ts;
+        if (m_encoded_file.is_split() && 0 != m_encoded_file.get_split_ix()) {
+            reference_ts = file_to_last_ts.at(temp_output_path.string());
+            m_ir_decompressor.set_last_ts(reference_ts);
+        } else {
+            reference_ts = m_encoded_file.get_begin_ts();
+            m_ir_decompressor.write_premable(reference_ts, "", "", "");
         }
-        m_ir_decompressor.write_premable(reference_ts, "", "", "");
         // Decompress
         archive_reader.reset_file_indices(m_encoded_file);
         while (archive_reader.get_next_message(m_encoded_file, m_encoded_message)) {
@@ -136,8 +136,11 @@ namespace clp {
             m_ir_decompressor.write_msg(m_ir_message);
         }
 
+        // record timestamp
+        file_to_last_ts[temp_output_path.string()] = m_ir_decompressor.get_last_ts();
+
         // Close files
-        m_ir_decompressor.close();
+        m_ir_decompressor.close_without_eof();
         archive_reader.close_file(m_encoded_file);
 
         return true;

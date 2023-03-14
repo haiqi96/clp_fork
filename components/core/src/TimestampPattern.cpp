@@ -126,6 +126,8 @@ void TimestampPattern::init () {
     // E.g. Started POST "/api/v3/internal/allowed" for 127.0.0.1 at 2017-06-18 00:20:44
     patterns.emplace_back(6, "%Y-%m-%d %H:%M:%S");
     // E.g. update-alternatives 2015-01-31 15:50:45
+    patterns.emplace_back(1, "%Y-%m-%d %H:%M:%S.%3");
+    // E.g. update-alternatives 2015-01-31 15:50:45
     patterns.emplace_back(1, "%Y-%m-%d %H:%M:%S");
     // E.g. ERROR: apport (pid 4557) Sun Jan  1 15:50:45 2015
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");

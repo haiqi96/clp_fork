@@ -62,7 +62,7 @@ namespace streaming_archive::reader {
         segment_id_t get_segment_id () const { return m_segment_id; }
         uint64_t get_num_messages () const { return m_num_messages; }
         bool is_split () const { return m_is_split; }
-
+        size_t get_split_ix () const { return m_split_ix; }
     private:
         friend class Archive;
 

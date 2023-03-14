@@ -26,14 +26,20 @@ namespace clp {
          * Closes the file
          * @throw FileWriter::OperationFailed on failure
          */
-        void close ();
+        void close_without_eof ();
 
         bool write_premable(epochtime_t reference_ts,
                             const std::string& timestamp_pattern,
                             const std::string& timestamp_pattern_syntax,
                             const std::string& timezone);
 
-        void write_msg(const streaming_archive::reader::IRMessage& ir_msg);
+        void write_msg (const streaming_archive::reader::IRMessage& ir_msg);
+
+        epochtime_t get_last_ts() const { return m_last_ts; }
+
+        void set_last_ts(epochtime_t ts) { m_last_ts = ts; }
+
+        void write_eof_and_close();
 
     private:
         // Variables
@@ -51,7 +57,7 @@ namespace clp {
 
         streaming_compression::zstd::Compressor m_zstd_ir_compressor;
         FileWriter m_decompressed_file_writer;
-        epochtime_t last_ts;
+        epochtime_t m_last_ts;
     };
 }
 

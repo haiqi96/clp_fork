@@ -31,7 +31,8 @@ namespace clp {
                 m_target_encoded_file_size(512L * 1024 * 1024),
                 m_target_data_size_of_dictionaries(100L * 1024 * 1024),
                 m_compression_level(3),
-                m_glt_combine_threshold(0.1) {}
+                m_glt_combine_threshold(0.1),
+                m_decompress_to_ir(false) {}
 
         // Methods
         ParsingResult parse_arguments (int argc, const char* argv[]) override;
@@ -53,6 +54,7 @@ namespace clp {
         const std::string& get_archives_dir () const { return m_archives_dir; }
         const std::vector<std::string>& get_input_paths () const { return m_input_paths; }
         const GlobalMetadataDBConfig& get_metadata_db_config () const { return m_metadata_db_config; }
+        bool decompress_to_ir() const { return m_decompress_to_ir; }
 
     private:
         // Methods
@@ -75,6 +77,7 @@ namespace clp {
         double m_glt_combine_threshold;
         Command m_command;
         std::string m_archives_dir;
+        bool m_decompress_to_ir;
         std::vector<std::string> m_input_paths;
         GlobalMetadataDBConfig m_metadata_db_config;
     };

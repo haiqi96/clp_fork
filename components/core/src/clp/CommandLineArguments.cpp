@@ -169,8 +169,14 @@ namespace clp {
                 extraction_positional_options_description.add("output-dir", 1);
                 extraction_positional_options_description.add("paths", -1);
 
+                // Define compression-specific options
+                po::options_description options_extraction("Extraction Options");
+                options_extraction.add_options()
+                        ("ir", po::bool_switch(&m_decompress_to_ir), "Decompress to single IR");
+
                 po::options_description all_extraction_options;
                 all_extraction_options.add(extraction_positional_options);
+                all_extraction_options.add(options_extraction);
 
                 // Parse extraction options
                 vector<string> unrecognized_options = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -204,6 +210,14 @@ namespace clp {
                 if (m_archives_dir.empty()) {
                     throw invalid_argument("ARCHIVES_DIR cannot be empty.");
                 }
+
+                // for now, only support IR flow when there is a single file
+//                if (m_decompress_to_ir) {
+//                    if(m_input_paths.size() != 1) {
+//                        throw invalid_argument("only supporting one file for IR flow.");
+//                    }
+//                }
+
             } else if (Command::Compress == m_command) {
                 // Define compression hidden positional options
                 po::options_description compression_positional_options;

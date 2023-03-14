@@ -13,11 +13,16 @@ namespace clp {
         m_zstd_ir_compressor.open(m_decompressed_file_writer);
     }
 
-    void IRDecompressor::close () {
+    void IRDecompressor::write_eof_and_close () {
         m_zstd_ir_compressor.write_char(char(ffi::ir_stream::cProtocol::Eof));
         m_zstd_ir_compressor.close();
         m_decompressed_file_writer.close();
-        last_ts = 0;
+    }
+
+    void IRDecompressor::close_without_eof () {
+        m_zstd_ir_compressor.close();
+        m_decompressed_file_writer.close();
+        m_last_ts = 0;
     }
 
     void IRDecompressor::write_msg (const streaming_archive::reader::IRMessage& ir_msg) {
@@ -39,8 +44,8 @@ namespace clp {
 
         epochtime_t msg_timestamp = ir_msg.get_timestamp();
         if (0 != msg_timestamp) {
-            epochtime_t timestamp_delta = msg_timestamp - last_ts;
-            last_ts = ir_msg.get_timestamp();
+            epochtime_t timestamp_delta = msg_timestamp - m_last_ts;
+            m_last_ts = ir_msg.get_timestamp();
             write_timestamp(timestamp_delta);
         } else {
             write_null_ts_tag();
@@ -136,7 +141,7 @@ namespace clp {
             m_zstd_ir_compressor.write(reinterpret_cast<const char*>(ir_buf.data()),
                                              ir_buf.size());
         }
-        last_ts = reference_ts;
+        m_last_ts = reference_ts;
         return result;
 
 //        write_magic_number();

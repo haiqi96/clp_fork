@@ -26,8 +26,9 @@ using std::string;
 using std::unique_ptr;
 using std::unordered_set;
 
-#define DECOMPRESS decompress_to_ir
-//#define DECOMPRESS decompress_file
+//#define DECOMPRESS decompress_to_ir
+#define DECOMPRESS decompress_file
+
 namespace clp {
     bool decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
         ErrorCode error_code;
@@ -71,6 +72,8 @@ namespace clp {
             string archive_id;
             string orig_path;
             std::unordered_map<string, string> temp_path_to_final_path;
+            std::unordered_map<string, epochtime_t> file_name_to_last_ts;
+
             global_metadata_db->open();
             if (files_to_decompress.empty()) {
                 for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
@@ -95,12 +98,21 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
-                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
-                                                                       temp_path_to_final_path))
-                        {
-                            return false;
+                        if(command_line_args.decompress_to_ir()) {
+                            if (false == file_decompressor.decompress_to_ir(file_metadata_ix,
+                                                                            command_line_args.get_output_dir(),
+                                                                            archive_reader,
+                                                                            temp_path_to_final_path,
+                                                                            file_name_to_last_ts)) {
+                                return false;
+                            }
+                        } else {
+                            if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
+                                                                           temp_path_to_final_path))
+                            {
+                                return false;
+                            }
                         }
-                        file_metadata_ix.get_path(orig_path);
                         decompressed_files.insert(orig_path);
                     }
                     file_metadata_ix_ptr.reset(nullptr);
@@ -123,9 +135,20 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
-                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
-                                                                       temp_path_to_final_path))
-                        {
+                        bool res;
+                        if (command_line_args.decompress_to_ir()) {
+                            res = file_decompressor.decompress_to_ir(file_metadata_ix,
+                                                                     command_line_args.get_output_dir(),
+                                                                     archive_reader,
+                                                                     temp_path_to_final_path,
+                                                                     file_name_to_last_ts);
+                        } else {
+                            res = file_decompressor.DECOMPRESS(file_metadata_ix,
+                                                               command_line_args.get_output_dir(),
+                                                               archive_reader,
+                                                               temp_path_to_final_path);
+                        }
+                        if (false == res) {
                             return false;
                         }
                         decompressed_files.insert(file_path);
@@ -151,14 +174,21 @@ namespace clp {
                             // Skip files that aren't in the list of files to decompress
                             continue;
                         }
-
-                        // Decompress file
-                        if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
-                                                                       temp_path_to_final_path))
-                        {
-                            return false;
+                        if(command_line_args.decompress_to_ir()) {
+                            if (false == file_decompressor.decompress_to_ir(file_metadata_ix,
+                                                                            command_line_args.get_output_dir(),
+                                                                            archive_reader,
+                                                                            temp_path_to_final_path,
+                                                                            file_name_to_last_ts)) {
+                                return false;
+                            }
+                        } else {
+                            if (false == file_decompressor.DECOMPRESS(file_metadata_ix, command_line_args.get_output_dir(), archive_reader,
+                                                                      temp_path_to_final_path))
+                            {
+                                return false;
+                            }
                         }
-                        file_metadata_ix.get_path(orig_path);
                         decompressed_files.insert(orig_path);
                     }
                     file_metadata_ix_ptr.reset(nullptr);
@@ -167,7 +197,12 @@ namespace clp {
                 }
             }
             global_metadata_db->close();
-
+            if (command_line_args.decompress_to_ir()) {
+                for (const auto& iter : file_name_to_last_ts) {
+                    file_decompressor.m_ir_decompressor.open(iter.first.c_str(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_APPENDING);
+                    file_decompressor.m_ir_decompressor.write_eof_and_close();
+                }
+            }
             string final_path;
             boost::system::error_code boost_error_code;
             for (const auto& temp_path_and_final_path : temp_path_to_final_path) {

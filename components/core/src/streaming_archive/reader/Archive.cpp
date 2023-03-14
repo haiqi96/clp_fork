@@ -195,7 +195,12 @@ namespace streaming_archive { namespace reader {
                 }
                 file.increment_current_ts_pattern_ix();
             }
-            timestamp_patterns[file.get_current_ts_pattern_ix()].second.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
+            // TODO: For file compressed from IR, can't simply use timestamp pattern to decide
+            // if a line doesn't have a timestamp, so adding a null ts check.
+            if(compressed_msg.get_ts_in_milli() != 0) {
+                timestamp_patterns[file.get_current_ts_pattern_ix()].second.insert_formatted_timestamp(
+                        compressed_msg.get_ts_in_milli(), decompressed_msg);
+            }
         }
 
         return true;
