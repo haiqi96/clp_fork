@@ -375,7 +375,8 @@ set(SOURCE_FILES_clp
         src/clp/IRDecompressor.cpp src/clp/IRDecompressor.hpp
         src/streaming_archive/reader/IRMessage.cpp
         src/streaming_archive/reader/IRMessage.hpp
-    )
+        src/clp/STDIRDecompressor.cpp
+        src/clp/STDIRDecompressor.hpp)
 add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp
         PRIVATE
@@ -997,8 +998,11 @@ set(SOURCE_FILES_ir_decoder
         src/LibarchiveReader.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
-    src/streaming_archive/reader/IRMessage.cpp
-    src/streaming_archive/reader/IRMessage.hpp
+        src/streaming_archive/reader/IRMessage.cpp
+        src/streaming_archive/reader/IRMessage.hpp
+        submodules/sqlite3/sqlite3.c
+        submodules/sqlite3/sqlite3.h
+        submodules/sqlite3/sqlite3ext.h
     )
 add_executable(ir_decoder ${SOURCE_FILES_ir_decoder})
 target_link_libraries(ir_decoder

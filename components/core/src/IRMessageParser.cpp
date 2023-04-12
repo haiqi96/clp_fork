@@ -339,7 +339,7 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
             message.set_ts_pattern(0, time_stamp_string);
         }
     } else {
-        time_stamp_string = "%y/%m/%d %H:%M:%S";
+        time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
         message.set_ts_pattern(0, time_stamp_string);
     }
 

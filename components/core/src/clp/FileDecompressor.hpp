@@ -11,6 +11,8 @@
 #include "../streaming_archive/reader/File.hpp"
 #include "../streaming_archive/reader/Message.hpp"
 #include "IRDecompressor.hpp"
+#include "STDIRDecompressor.hpp"
+
 namespace clp {
     /**
      * Class to hold the data structures that are used to decompress files rather than recreating them within the decompression function or passing them as
@@ -24,7 +26,11 @@ namespace clp {
         bool decompress_to_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
                                streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
                                std::unordered_map<std::string, epochtime_t>& file_to_last_ts);
+       bool decompress_to_4bytes_ir (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
+                                     streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path,
+                                     std::unordered_map<std::string, epochtime_t>& file_to_last_ts);
         IRDecompressor m_ir_decompressor;
+        STDIRDecompressor m_std_ir_decompressor;
 
     private:
         // Variables

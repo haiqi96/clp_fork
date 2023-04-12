@@ -125,6 +125,18 @@ namespace streaming_archive::reader {
         return m_var_dictionary;
     }
 
+    bool Archive::ir_encode_std_message (const Message& compressed_msg, IRMessage& ir_msg) {
+        // Build original message content
+        const logtype_dictionary_id_t logtype_id = compressed_msg.get_logtype_id();
+        const auto& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
+        if (!EncodedVariableInterpreter::decode_variables_into_std_ir_message(logtype_entry, m_var_dictionary, compressed_msg.get_vars(), ir_msg)) {
+            SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", compressed_msg.get_logtype_id());
+            return false;
+        }
+        ir_msg.set_time(compressed_msg.get_ts_in_milli());
+        return true;
+    }
+
     bool Archive::ir_encode_message (const Message& compressed_msg, IRMessage& ir_msg) {
         // Build original message content
         const logtype_dictionary_id_t logtype_id = compressed_msg.get_logtype_id();

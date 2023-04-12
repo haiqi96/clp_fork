@@ -84,6 +84,7 @@ namespace streaming_archive::reader {
          * @return true if message was successfully decompressed, false otherwise
          */
         bool ir_encode_message (const Message& compressed_msg, IRMessage& ir_msg);
+        bool ir_encode_std_message (const Message& compressed_msg, IRMessage& ir_msg);
 
         void decompress_empty_directories (const std::string& output_dir);
 

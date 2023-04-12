@@ -201,8 +201,8 @@ namespace clp {
             global_metadata_db->close();
             if (command_line_args.decompress_to_ir()) {
                 for (const auto& iter : file_name_to_last_ts) {
-                    file_decompressor.m_ir_decompressor.open(iter.first.c_str(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_APPENDING);
-                    file_decompressor.m_ir_decompressor.write_eof_and_close();
+                    file_decompressor.m_std_ir_decompressor.open(iter.first.c_str(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_APPENDING);
+                    file_decompressor.m_std_ir_decompressor.write_eof_and_close();
                 }
             }
             string final_path;

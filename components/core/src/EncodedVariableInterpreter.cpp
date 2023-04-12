@@ -459,32 +459,8 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
         // Encode variable
         encoded_variable_t encoded_var;
         if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
-            int32_t ir_int;
-            bool conversion_success = convert_clp_int_to_compact_ir_int(encoded_var, ir_int);
-            if(conversion_success) {
-                if(ir_int != encoded_var) {
-                    std::cout << "int not equal, clp: " << encoded_var << ". ir: " << ir_int << std::endl;
-                    throw;
-                }
-            }
-//            else {
-//                std::cout << "can't convert int: " << var_str << std::endl;
-//            }
             logtype_dict_entry.add_int_var();
         } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
-            uint32_t ir_float;
-            bool conversion_success = convert_clp_double_to_compact_ir_float(encoded_var, ir_float);
-            if(conversion_success) {
-                std::string value;
-                convert_compact_encoded_double_to_string(ir_float, value);
-                if(value != var_str) {
-                    std::cout << "float not equal, clp: " << var_str << ". ir: " << value << std::endl;
-                    throw;
-                }
-            }
-//            else {
-//                std::cout << "can't convert float: " << var_str << std::endl;
-//            }
             logtype_dict_entry.add_float_var();
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
@@ -537,6 +513,48 @@ bool EncodedVariableInterpreter::decode_variables_into_ir_message (const LogType
                 convert_encoded_double_to_string(encoded_vars[i], double_str);
                 ir_msg.append_dict_vars(double_str);
             }
+        } else {
+            auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
+            ir_msg.append_dict_vars(var_dict.get_value(var_dict_id));
+        }
+        // Move past the variable delimiter
+        constant_begin_pos = var_position + 1;
+    }
+    // Append remainder of logtype, if any
+    if (constant_begin_pos < logtype_value.length()) {
+        ir_msg.logtype_append(logtype_value, constant_begin_pos, string::npos);
+    }
+    return true;
+}
+
+
+bool EncodedVariableInterpreter::decode_variables_into_std_ir_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
+                                                                       const vector<encoded_variable_t>& encoded_vars, streaming_archive::reader::IRMessage& ir_msg)
+{
+    ir_msg.clear();
+    size_t num_vars_in_logtype = logtype_dict_entry.get_num_vars();
+
+    // Ensure the number of variables in the logtype matches the number of encoded variables given
+    const auto& logtype_value = logtype_dict_entry.get_value();
+    if (num_vars_in_logtype != encoded_vars.size()) {
+        SPDLOG_ERROR("EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given for decoding.", logtype_value.c_str(),
+                     num_vars_in_logtype, encoded_vars.size());
+        return false;
+    }
+    std::string converted_logtype_str;
+    LogTypeDictionaryEntry::VarDelim var_delim;
+    size_t constant_begin_pos = 0;
+    string double_str;
+    for (size_t i = 0; i < num_vars_in_logtype; ++i) {
+        size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
+        encoded_variable_t encoded_var = encoded_vars[i];
+        // Add the constant that's between the last variable and this one
+        ir_msg.logtype_append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+
+        if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
+            ir_msg.append_int_vars(encoded_var);
+        } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
+            ir_msg.append_float_vars(encoded_var);
         } else {
             auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
             ir_msg.append_dict_vars(var_dict.get_value(var_dict_id));
