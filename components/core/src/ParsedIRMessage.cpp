@@ -24,9 +24,7 @@ void ParsedIRMessage::clear() {
     if(m_ts_patt != nullptr) {
         m_ts_patt.reset();
     }
-    m_dictionary_vars.clear();
-    m_encoded_vars.clear();
-    m_placeholder_pos.clear();
+    clear_except_ts_patt();
 }
 
 void ParsedIRMessage::recover_message(std::string& message) {
@@ -65,4 +63,5 @@ void ParsedIRMessage::clear_except_ts_patt() {
     m_dictionary_vars.clear();
     m_encoded_vars.clear();
     m_placeholder_pos.clear();
+    m_is_dict_var.clear();
 }

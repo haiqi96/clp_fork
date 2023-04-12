@@ -103,10 +103,10 @@ void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& c
     compressor.write_numeric_value(m_id);
     compressor.write_numeric_value<uint8_t>(m_verbosity);
 
-    string escaped_value;
-    get_value_with_unfounded_variables_escaped(escaped_value);
-    compressor.write_numeric_value<uint64_t>(escaped_value.length());
-    compressor.write_string(escaped_value);
+    //string escaped_value = m_value;
+    //get_value_with_unfounded_variables_escaped(escaped_value);
+    compressor.write_numeric_value<uint64_t>(m_value.length());
+    compressor.write_string(m_value);
 }
 
 ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Decompressor& decompressor) {

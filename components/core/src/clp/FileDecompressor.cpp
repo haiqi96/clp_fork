@@ -31,6 +31,7 @@ namespace clp {
         boost::filesystem::path temp_output_path = output_dir;
         FileWriter::OpenMode open_mode;
         boost::system::error_code boost_error_code;
+        printf("%s\n", m_encoded_file.get_orig_path().c_str());
         if (m_encoded_file.is_split() || boost::filesystem::exists(final_output_path, boost_error_code)) {
             temp_output_path /= m_encoded_file.get_orig_file_id_as_string();
             open_mode = FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_APPENDING;

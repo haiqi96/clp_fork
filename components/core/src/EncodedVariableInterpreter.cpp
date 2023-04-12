@@ -348,38 +348,42 @@ void EncodedVariableInterpreter::encode_ir_and_add_to_dictionary (const ParsedIR
     const auto& var_pos = message.get_placeholder_pos();
     std::string logtype_str = message.get_log_type();
     std::string var_str;
-    for (auto pos : var_pos) {
-        const char placeholder = logtype_str.at(pos);
-        if (message.is_compact()) {
+    if (message.is_compact()) {
+        for (auto pos : var_pos) {
+            const char placeholder = logtype_str.at(pos);
             if (placeholder == enum_to_underlying_type(VariablePlaceholder::Integer)) {
                 encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
             } else if (placeholder == enum_to_underlying_type(VariablePlaceholder::Float)) {
-                encoded_vars.push_back(convert_compact_ir_float_to_clp_double(ir_encoded_vars.at(ir_encoded_var_ix++)));
+                encoded_vars.push_back(convert_compact_ir_float_to_clp_double(
+                        ir_encoded_vars.at(ir_encoded_var_ix++)));
             } else {
                 var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                 encoded_variable_t converted_var;
-                if(convert_string_to_representable_integer_var(var_str, converted_var)) {
+                if (convert_string_to_representable_integer_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer);
+                    logtype_str.at(pos) = enum_to_underlying_type(
+                            LogTypeDictionaryEntry::VarDelim::Integer);
                 } else if (convert_string_to_representable_double_var(var_str, converted_var)) {
                     encoded_vars.push_back(converted_var);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
+                    logtype_str.at(pos) = enum_to_underlying_type(
+                            LogTypeDictionaryEntry::VarDelim::Float);
                 } else {
                     variable_dictionary_id_t id;
                     var_dict.add_entry(var_str, id);
                     encoded_vars.push_back(encode_var_dict_id(id));
                     var_ids.push_back(id);
-                    logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
                 }
             }
-        } else {
-            if(placeholder == enum_to_underlying_type(VariablePlaceholder::Dictionary)) {
+        }
+    } else {
+        const auto& is_dict_vars = message.get_is_dict_vec();
+        for (const auto& is_dict_var : is_dict_vars) {
+            if (is_dict_var) {
                 var_str = dictionary_vars.at(ir_dictionary_var_ix++);
                 variable_dictionary_id_t id;
                 var_dict.add_entry(var_str, id);
                 encoded_vars.push_back(encode_var_dict_id(id));
                 var_ids.push_back(id);
-                logtype_str.at(pos) = enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
             } else {
                 encoded_vars.push_back(ir_encoded_vars.at(ir_encoded_var_ix++));
             }

@@ -193,6 +193,20 @@ void IRMessageParser::parse_log_type(ReaderInterface &reader, ParsedIRMessage &m
     message.set_log_type(log_type);
 }
 
+void IRMessageParser::parse_std_log_type(ReaderInterface &reader, ParsedIRMessage &message, uint8_t tag_byte) {
+
+    size_t log_length = get_logtype_length(reader, tag_byte);
+    std::vector<char> buffer(log_length);
+    size_t read_length;
+    auto error_code = reader.try_read(buffer.data(), log_length, read_length);
+    if (ErrorCode_Success != error_code || read_length != log_length) {
+        SPDLOG_ERROR("Failed to read logtype");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    std::string log_type(buffer.data(), log_length);
+    message.set_log_type(log_type);
+}
+
 bool IRMessageParser::parse_next_compact_message(ReaderInterface &reader, ParsedIRMessage &message) {
     message.clear_except_ts_patt();
 
@@ -264,7 +278,7 @@ bool IRMessageParser::parse_next_std_message(ReaderInterface &reader, ParsedIRMe
         tag_byte = read_byte(reader);
     }
 
-    parse_log_type(reader, message, tag_byte);
+    parse_std_log_type(reader, message, tag_byte);
 
     // now parse timestamp
     tag_byte = read_byte(reader);

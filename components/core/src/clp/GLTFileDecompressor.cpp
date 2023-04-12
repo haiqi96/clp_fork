@@ -26,7 +26,7 @@ namespace clp {
 
         boost::filesystem::path final_output_path = output_dir;
         final_output_path /= m_encoded_file.get_orig_path();
-
+        printf("%s\n", m_encoded_file.get_orig_path().c_str());
         boost::filesystem::path temp_output_path = output_dir;
         FileWriter::OpenMode open_mode;
         boost::system::error_code boost_error_code;

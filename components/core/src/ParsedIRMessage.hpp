@@ -26,13 +26,21 @@ public:
     void clear();
     void clear_except_ts_patt();
     void set_ts_pattern(uint8_t num_spaces_before_ts, const std::string& format);
-    void append_encoded_vars(encoded_variable_t var) { m_encoded_vars.push_back(var);};
+    void append_encoded_vars(encoded_variable_t var) {
+        m_encoded_vars.push_back(var);
+        m_is_dict_var.push_back(false);
+    };
     void set_log_type(std::string& log_type) { m_log_type = log_type; }
-    void append_dict_vars(std::string dictionary_var) { m_dictionary_vars.push_back(dictionary_var); }
+    void append_dict_vars(std::string dictionary_var) {
+        m_dictionary_vars.push_back(dictionary_var);
+        m_is_dict_var.push_back(true);
+    }
     void set_time(epochtime_t t) { m_ts = t; }
     void add_placeholder(size_t pos) { m_placeholder_pos.push_back(pos); }
     void set_compact(bool is_compact) { m_is_compact = is_compact; }
     bool is_compact() const { return m_is_compact; }
+
+    const std::vector<bool>& get_is_dict_vec() const { return m_is_dict_var; }
 
     void recover_message(std::string& message);
 
@@ -66,6 +74,7 @@ private:
     std::unique_ptr<TimestampPattern> m_ts_patt;
     std::vector<std::string> m_dictionary_vars;
     std::vector<encoded_variable_t> m_encoded_vars;
+    std::vector<bool> m_is_dict_var;
     std::string m_log_type;
     // true is encoded, not true is string vars
     std::vector<size_t> m_placeholder_pos;

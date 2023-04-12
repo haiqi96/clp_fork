@@ -65,6 +65,7 @@ private:
 
     void parse_dictionary_var (ReaderInterface& reader, ParsedIRMessage& message, uint8_t tag_byte);
     void parse_log_type(ReaderInterface& reader, ParsedIRMessage& message, uint8_t tag_byte);
+    void parse_std_log_type(ReaderInterface& reader, ParsedIRMessage& message, uint8_t tag_byte);
 
     // variables
     std::string m_timezone;
