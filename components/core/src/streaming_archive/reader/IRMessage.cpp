@@ -1,4 +1,5 @@
 #include "IRMessage.hpp"
+#include "../../ffi/encoding_methods.hpp"
 
 namespace streaming_archive::reader {
     void IRMessage::clear () {
@@ -27,7 +28,12 @@ namespace streaming_archive::reader {
     }
 
     void IRMessage::logtype_append (const std::string& logtype_str, size_t begin, size_t length) {
-        m_log_type.append(logtype_str, begin, length);
+        for(size_t pos = begin; pos < begin + length; pos++) {
+            char char_var = logtype_str.at(pos);
+            if (ffi::is_variable_placeholder(char_var) || char_var == '\\') {
+                m_log_type += '\\';
+            }
+            m_log_type += char_var;
+        }
     }
-
 }

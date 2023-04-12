@@ -568,7 +568,7 @@ bool EncodedVariableInterpreter::decode_variables_into_std_ir_message (const Log
     }
     // Append remainder of logtype, if any
     if (constant_begin_pos < logtype_value.length()) {
-        ir_msg.logtype_append(logtype_value, constant_begin_pos, string::npos);
+        ir_msg.logtype_append(logtype_value, constant_begin_pos, logtype_value.length() - constant_begin_pos);
     }
     return true;
 }

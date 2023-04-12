@@ -349,11 +349,11 @@ bool IRMessageParser::parse_metadata(ReaderInterface &reader, ParsedIRMessage &m
         m_last_timestamp = boost::lexical_cast<epochtime_t>(reference_timestamp);
         // if reference_timestamp, the file only contains messages without timestamp
         if (0 != m_last_timestamp) {
-            time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
+            time_stamp_string = "%Y-%m-%d %H:%M:%S.%3";
             message.set_ts_pattern(0, time_stamp_string);
         }
     } else {
-        time_stamp_string = "%Y-%m-%d %H:%M:%S,%3";
+        time_stamp_string = "%Y-%m-%d %H:%M:%S.%3";
         message.set_ts_pattern(0, time_stamp_string);
     }
 
