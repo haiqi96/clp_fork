@@ -215,6 +215,8 @@ namespace clp {
                 compression_positional_options_description.add("output-dir", 1);
                 compression_positional_options_description.add("input-paths", -1);
 
+                string storage_engine = "clp";
+
                 // Define compression-specific options
                 po::options_description options_compression("Compression Options");
                 options_compression.add_options()
@@ -231,11 +233,16 @@ namespace clp {
                                 "Target size (B) for the dictionaries before a new archive is created")
                         ("compression-level", po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(m_compression_level),
                                 "1 (fast/low compression) to 9 (slow/high compression)")
-                        ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress), "Print statistics (ndjson) about each archive as "
-                                                                                                           "it's compressed")
+                        ("combine-threshold", po::value<double>(&m_glt_combine_threshold)->value_name("VALUE")->default_value(m_glt_combine_threshold),
+                                "Percentage threshold used to determine if a logtype should be stored in a combined table.")
+                        ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress),
+                                "Print statistics (ndjson) about each archive as it's compressed")
+                        ("storage-engine", po::value<string>(&storage_engine)->value_name("engine")->default_value(storage_engine),
+                                "Use storage engine specified by ENGINE (clp - CLP, glt - GLT)")
                         ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
                         ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path),
-                         "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. See README-Schema.md for details.")
+                                "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. "
+                                "See README-Schema.md for details.")
                         ;
 
                 po::options_description all_compression_options;
@@ -300,6 +307,20 @@ namespace clp {
                     if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
                         throw invalid_argument("Specified schema file '" +  m_schema_file_path + "' is not a regular file.");
                     }
+                }
+
+                if (storage_engine == "clp") {
+                    m_use_glt = false;
+                    if (m_glt_combine_threshold != 0.1) {
+                        throw invalid_argument("--combined-threshold specified when storage engine is not GLT");
+                    }
+                } else if (storage_engine == "glt") {
+                    m_use_glt = true;
+                    if (m_glt_combine_threshold < 0 || m_glt_combine_threshold > 100) {
+                        throw invalid_argument("specified combined-threshold is %d invalid");
+                    }
+                } else {
+                    throw invalid_argument("Unknown --storage-engine specified.");
                 }
             }
 
