@@ -1,4 +1,4 @@
-#include "FileDecompressor.hpp"
+#include "GLTFileDecompressor.hpp"
 
 // Boost libraries
 #include <boost/filesystem/path.hpp>
@@ -10,8 +10,8 @@
 using std::string;
 
 namespace clp {
-    bool FileDecompressor::decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const string& output_dir,
-                                            streaming_archive::reader::clp::CLPArchive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
+    bool GLTFileDecompressor::decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const string& output_dir,
+                                               streaming_archive::reader::glt::GLTArchive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
     {
         // Open compressed file
         auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
