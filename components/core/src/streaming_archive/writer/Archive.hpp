@@ -2,12 +2,13 @@
 #define STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
 
 // C++ libraries
+#include <filesystem>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <filesystem>
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
@@ -15,11 +16,12 @@
 
 // Project headers
 #include "../../ArrayBackedPosIntSet.hpp"
+#include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
-#include "../../compressor_frontend/Token.hpp"
+#include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
 
 namespace streaming_archive::writer {
@@ -222,15 +224,10 @@ namespace streaming_archive::writer {
         void persist_file_metadata (const std::vector<File*>& files);
 
         /**
-         * Gets the size of uncompressed data that has been compressed into the archive and will not be changed
-         * @return Size in bytes
+         * @return The size (in bytes) of compressed data whose size may change
+         * before the archive is closed
          */
-        size_t get_stable_uncompressed_size () const;
-        /**
-         * Gets the size of the portion of the archive that will not be changed
-         * @return Size in bytes
-         */
-        virtual size_t get_stable_size () const;
+        virtual uint64_t get_dynamic_compressed_size ();
         /**
          * Updates the archive's metadata
          */
@@ -274,13 +271,11 @@ namespace streaming_archive::writer {
 
         size_t m_target_segment_uncompressed_size;
 
-        size_t m_stable_uncompressed_size;
-        size_t m_stable_size;
-
         int m_compression_level;
 
         std::unique_ptr<MetadataDB> m_metadata_db;
 
+        std::optional<ArchiveMetadata> m_local_metadata;
         FileWriter m_metadata_file_writer;
 
         GlobalMetadataDB* m_global_metadata_db;

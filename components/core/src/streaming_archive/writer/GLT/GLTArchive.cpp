@@ -144,21 +144,23 @@ namespace streaming_archive::writer {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                        m_logtype_dict_entry.add_dictionary_var();
+                    } else {
+                        m_logtype_dict_entry.add_int_var();
                     }
-                    m_logtype_dict_entry.add_non_double_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
-                case (int)compressor_frontend::SymbolID::TokenDoubleId: {
+                case (int)compressor_frontend::SymbolID::TokenFloatId: {
                     encoded_variable_t encoded_var;
-                    if (!EncodedVariableInterpreter::convert_string_to_representable_double_var(
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
                             token.get_string(), encoded_var)) {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                        m_logtype_dict_entry.add_non_double_var();
+                        m_logtype_dict_entry.add_dictionary_var();
                     } else {
-                        m_logtype_dict_entry.add_double_var();
+                        m_logtype_dict_entry.add_float_var();
                     }
                     m_encoded_vars.push_back(encoded_var);
                     break;
@@ -171,7 +173,7 @@ namespace streaming_archive::writer {
                     encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                     m_var_ids.push_back(id);
 
-                    m_logtype_dict_entry.add_non_double_var();
+                    m_logtype_dict_entry.add_dictionary_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
@@ -223,6 +225,8 @@ namespace streaming_archive::writer {
 
         m_file->append_to_segment(m_logtype_dict, segment);
         files_in_segment.emplace_back(m_file);
+        m_local_metadata->increment_static_uncompressed_size(m_file->get_num_uncompressed_bytes());
+        m_local_metadata->expand_time_range(m_file->get_begin_ts(), m_file->get_end_ts());
 
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() + glt_segment.get_uncompressed_size() >=
@@ -243,13 +247,13 @@ namespace streaming_archive::writer {
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);
         m_var_dict.index_segment(segment_id, segment_var_ids);
 
-        m_stable_size += on_disk_stream.get_compressed_size();
+        m_local_metadata->increment_static_compressed_size(on_disk_stream.get_compressed_size());
 
         on_disk_stream.close();
         glt_segment.close();
         // Have to call this function after closing the segments because
         // Variable segment currently only gets written to disk after closing the segment.
-        m_stable_size += glt_segment.get_compressed_size();
+        m_local_metadata->increment_static_compressed_size(glt_segment.get_compressed_size());
 #if FLUSH_TO_DISK_ENABLED
         // fsync segments directory to flush segment's directory entry
         if (fsync(m_segments_dir_fd) != 0) {
@@ -268,13 +272,12 @@ namespace streaming_archive::writer {
         m_global_metadata_db->close();
 
         for (auto file : files) {
-            m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
             delete file;
         }
         files.clear();
     }
 
-    size_t GLTArchive::get_stable_size () const {
-        return Archive::get_stable_size() + m_filename_dict_writer.get_pos();
+    size_t GLTArchive::get_dynamic_compressed_size () {
+        return Archive::get_dynamic_compressed_size() + m_filename_dict_writer.get_pos();
     }
 }

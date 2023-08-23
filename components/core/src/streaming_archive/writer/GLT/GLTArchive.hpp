@@ -31,7 +31,7 @@ namespace streaming_archive::writer {
 
         void append_file_to_segment () override;
 
-        size_t get_stable_size () const override;
+        virtual uint64_t get_dynamic_compressed_size () override;
 
         /**
          * Closes a given segment, persists the metadata of the files in the segment

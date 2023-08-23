@@ -36,4 +36,35 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source) &&
     return dst;
 }
 
+/**
+ * Helper for defining std::variant overloads inline, using lambdas
+ * @tparam Ts The types of the variant that will be deduced using the deduction
+ * guide below
+ */
+template <class... Ts>
+struct overloaded : Ts ... {
+    using Ts::operator()...;
+};
+/**
+ * Explicit deduction guide for the types passed to the methods in the
+ * overloaded helper
+ */
+template <class... Ts> overloaded (Ts...) -> overloaded<Ts...>;
+
+/**
+ * Cast between pointers after ensuring the source and destination types are
+ * the same size
+ * @tparam Destination The destination type
+ * @tparam Source The source type
+ * @param src The source pointer
+ * @return The casted pointer
+ */
+template <typename Destination, class Source>
+std::enable_if_t<sizeof(Destination) == sizeof(Source), Destination*>
+        size_checked_pointer_cast (Source* src)
+{
+    return reinterpret_cast<Destination*>(src);
+}
+
+
 #endif // TYPE_UTILS_HPP

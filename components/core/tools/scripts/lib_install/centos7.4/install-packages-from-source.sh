@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Enable gcc 7
-source /opt/rh/devtoolset-7/enable
+# Enable gcc 9
+source /opt/rh/devtoolset-9/enable
 
 # NOTE: cmake and boost must be installed first since the remaining packages depend on them
 ./tools/scripts/lib_install/install-cmake.sh 3.21.2
@@ -11,6 +11,6 @@ source /opt/rh/devtoolset-7/enable
 ./tools/scripts/lib_install/libarchive.sh 3.5.1
 ./tools/scripts/lib_install/lz4.sh 1.8.2
 ./tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
-./tools/scripts/lib_install/msgpack.sh 5.0.0
+./tools/scripts/lib_install/msgpack.sh 6.0.0
 ./tools/scripts/lib_install/spdlog.sh 1.9.2
 ./tools/scripts/lib_install/zstandard.sh 1.4.9
