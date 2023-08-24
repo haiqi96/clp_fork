@@ -159,6 +159,7 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
+                // HACK: Need to rethink about this part.
                 if (converts_to_int) {
                     m_type = Type::Ambiguous;
                     m_possible_types.push_back(Type::DictionaryVar);
@@ -1255,12 +1256,13 @@ std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> Grep::get_converted_
 void Grep::get_boundaries(const std::vector<LogtypeQuery>& sub_queries, size_t& left_boundary, size_t& right_boundary) {
     left_boundary = SIZE_MAX;
     right_boundary = 0;
-    if(sub_queries.size() > 1) {
-        // we use a simple assumption atm.
-        // if subquery1 has range (a,b) and subquery2 has range (c,d).
-        // then the range will be (min(a,c), max(b,d)), even if c > b.
-        SPDLOG_DEBUG("Maybe this is not optimal");
-    }
+    // HACK: rethink about the current implementation
+//    if(sub_queries.size() > 1) {
+//        // we use a simple assumption atm.
+//        // if subquery1 has range (a,b) and subquery2 has range (c,d).
+//        // then the range will be (min(a,c), max(b,d)), even if c > b.
+//        SPDLOG_DEBUG("Maybe this is not optimal");
+//    }
     for(auto const& subquery : sub_queries) {
         // we use a simple assumption atm.
         // if subquery1 has range (a,b) and subquery2 has range (c,d).
