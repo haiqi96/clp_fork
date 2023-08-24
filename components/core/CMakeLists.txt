@@ -312,6 +312,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
         src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
         src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/Message.cpp
@@ -372,6 +374,10 @@ set(SOURCE_FILES_clp
         src/WriterInterface.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         )
 add_executable(clp ${SOURCE_FILES_clp})
 target_include_directories(clp
@@ -503,6 +509,26 @@ set(SOURCE_FILES_clg
         src/streaming_archive/reader/Segment.hpp
         src/streaming_archive/reader/SegmentManager.cpp
         src/streaming_archive/reader/SegmentManager.hpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/GLT/GLTArchive.cpp
+        src/streaming_archive/reader/GLT/GLTArchive.hpp
+        src/streaming_archive/reader/GLT/GLTFile.cpp
+        src/streaming_archive/reader/GLT/GLTFile.hpp
+        src/streaming_archive/reader/GLT/GLTMessage.cpp
+        src/streaming_archive/reader/GLT/GLTMessage.hpp
+        src/streaming_archive/reader/GLT/GLTSegment.cpp
+        src/streaming_archive/reader/GLT/GLTSegment.hpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.cpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.hpp
+        src/streaming_archive/reader/GLT/LogtypeTable.cpp
+        src/streaming_archive/reader/GLT/LogtypeTable.hpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.hpp
         src/streaming_archive/writer/CLP/CLPFile.cpp
         src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/File.cpp
@@ -545,6 +571,10 @@ set(SOURCE_FILES_clg
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         )
 add_executable(clg ${SOURCE_FILES_clg})
 target_include_directories(clg
@@ -656,6 +686,26 @@ set(SOURCE_FILES_clo
         src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/GLT/GLTArchive.cpp
+        src/streaming_archive/reader/GLT/GLTArchive.hpp
+        src/streaming_archive/reader/GLT/GLTFile.cpp
+        src/streaming_archive/reader/GLT/GLTFile.hpp
+        src/streaming_archive/reader/GLT/GLTMessage.cpp
+        src/streaming_archive/reader/GLT/GLTMessage.hpp
+        src/streaming_archive/reader/GLT/GLTSegment.cpp
+        src/streaming_archive/reader/GLT/GLTSegment.hpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.cpp
+        src/streaming_archive/reader/GLT/LogtypeMetadata.hpp
+        src/streaming_archive/reader/GLT/LogtypeTable.cpp
+        src/streaming_archive/reader/GLT/LogtypeTable.hpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -706,6 +756,10 @@ set(SOURCE_FILES_clo
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         )
 add_executable(clo ${SOURCE_FILES_clo})
 target_include_directories(clo
@@ -896,6 +950,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
         src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
         src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.cpp
+        src/streaming_archive/reader/GLT/SingleLogtypeTableManager.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -953,6 +1009,10 @@ set(SOURCE_FILES_unitTest
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h

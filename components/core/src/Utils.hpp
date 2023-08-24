@@ -108,4 +108,8 @@ std::string get_unambiguous_path (const std::string& path);
  */
 ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::string>& paths);
 
+size_t get_variable_front_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str);
+size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str);
+std::vector<std::string> split_wildcard(const std::string& input_str);
+
 #endif // UTILS_HPP

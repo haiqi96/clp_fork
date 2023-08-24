@@ -60,6 +60,17 @@ namespace streaming_archive::reader::glt {
         bool is_open() const { return m_is_open; }
         bool is_logtype_table_open() const { return m_is_logtype_open; }
 
+        void open_preloaded_logtype_table(
+                logtype_dictionary_id_t logtype_id,
+                std::unordered_map<logtype_dictionary_id_t, CombinedMetadata> const& metadata
+        );
+        void open_and_preload(
+                combined_table_id_t table_id,
+                logtype_dictionary_id_t logtype_id,
+                streaming_compression::Decompressor& decompressor,
+                std::unordered_map<logtype_dictionary_id_t, CombinedMetadata> const& metadata
+        );
+
     private:
 
         void load_logtype_table_data (streaming_compression::Decompressor& decompressor, char* read_buffer);
@@ -75,6 +86,7 @@ namespace streaming_archive::reader::glt {
         // question: do we still need a malloced buffer?
         std::unique_ptr<char[]> m_read_buffer;
         size_t m_buffer_size;
+        std::unique_ptr<char[]> m_decompressed_buffer;
         // for this data structure, m_column_based_variables[i] means all data at i th column
         // m_column_based_variables[i][j] means j th row at the i th column
         std::vector<encoded_variable_t> m_column_based_variables;

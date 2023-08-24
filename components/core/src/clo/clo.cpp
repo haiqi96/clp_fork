@@ -23,6 +23,7 @@
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../streaming_archive/reader/CLP/CLPArchive.hpp"
+#include "../streaming_archive/reader/GLT/GLTArchive.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
@@ -41,6 +42,8 @@ using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
 using streaming_archive::reader::clp::CLPArchive;
 using streaming_archive::reader::clp::CLPFile;
+using streaming_archive::reader::glt::GLTArchive;
+using streaming_archive::reader::glt::GLTMessage;
 using streaming_archive::reader::Message;
 
 // Local types
@@ -93,6 +96,53 @@ static SearchFilesResult search_clp_files (Query& query, CLPArchive& archive, Me
 static bool search_clp_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
                                 const std::atomic_bool& query_cancelled, int controller_socket_fd);
 
+/**
+ * Searches an archive with the given path
+ * @param command_line_args
+ * @param archive_path
+ * @param query_cancelled
+ * @param controller_socket_fd
+ * @return true on success, false otherwise
+ */
+static bool search_glt_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
+                                const std::atomic_bool& query_cancelled, int controller_socket_fd);
+
+
+static SearchFilesResult search_segments (Query& query, GLTArchive& archive, size_t segment_id,
+                                          const std::atomic_bool& query_cancelled, int controller_socket_fd)
+{
+    SearchFilesResult result = SearchFilesResult::Success;
+
+    GLTMessage compressed_message;
+    string decompressed_message;
+
+    query.make_sub_queries_relevant_to_segment(segment_id);
+    // convert old queries to new query type
+    auto converted_logtype_based_queries = Grep::get_converted_logtype_query(query, segment_id);
+    // use a vector to hold queries so they are sorted based on the ascending or descending order of their size,
+    // i.e. the order they appear in the segment.
+    std::vector<LogtypeQueries> single_table_queries;
+    // first level index is basically combined table index
+    // because we might not search through all combined tables, the first level is a map instead of a vector.
+    std::map<combined_table_id_t, std::vector<LogtypeQueries>> combined_table_queires;
+    archive.get_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
+
+    ErrorCode error_code = Grep::search_segment_and_send_results_optimized(single_table_queries, query, SIZE_MAX, archive, query_cancelled, controller_socket_fd);
+    if (ErrorCode_Success != error_code) {
+        result = SearchFilesResult::ResultSendFailure;
+        return result;
+    }
+    for(const auto& iter : combined_table_queires) {
+        combined_table_id_t table_id = iter.first;
+        const auto& combined_logtype_queries = iter.second;
+        ErrorCode error_code = Grep::search_combined_table_and_send_results(table_id, combined_logtype_queries, query, SIZE_MAX, archive, query_cancelled, controller_socket_fd);
+        if (ErrorCode_Success != error_code) {
+            result = SearchFilesResult::ResultSendFailure;
+            return result;
+        }
+    }
+    return result;
+}
 
 static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
     // Get address info for controller
@@ -257,6 +307,73 @@ static bool search_clp_archive (const CommandLineArguments& command_line_args, c
         }
     }
     file_metadata_ix_ptr.reset(nullptr);
+
+    archive_reader.close();
+
+    return true;
+}
+
+static bool search_glt_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
+                                const std::atomic_bool& query_cancelled, int controller_socket_fd)
+{
+    if (false == boost::filesystem::exists(archive_path)) {
+        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
+        return false;
+    }
+    auto archive_metadata_file = archive_path / streaming_archive::cMetadataFileName;
+    if (false == boost::filesystem::exists(archive_metadata_file)) {
+        SPDLOG_ERROR("Archive metadata file '{}' does not exist. '{}' may not be an archive.",
+                     archive_metadata_file.c_str(), archive_path.c_str());
+        return false;
+    }
+
+    // Load lexers from schema file if it exists
+    auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+    unique_ptr<compressor_frontend::lexers::ByteLexer> forward_lexer, reverse_lexer;
+    bool use_heuristic = true;
+    if (boost::filesystem::exists(schema_file_path)) {
+        use_heuristic = false;
+        // Create forward lexer
+        forward_lexer.reset(new compressor_frontend::lexers::ByteLexer());
+        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
+
+        // Create reverse lexer
+        reverse_lexer.reset(new compressor_frontend::lexers::ByteLexer());
+        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
+    }
+
+    GLTArchive archive_reader;
+    archive_reader.open(archive_path.string());
+    archive_reader.refresh_dictionaries();
+
+    auto search_begin_ts = command_line_args.get_search_begin_ts();
+    auto search_end_ts = command_line_args.get_search_end_ts();
+
+    Query query;
+    if (false == Grep::process_raw_query(archive_reader, command_line_args.get_search_string(), search_begin_ts,
+                                         search_end_ts, command_line_args.ignore_case(), query, *forward_lexer,
+                                         *reverse_lexer, use_heuristic))
+    {
+        return true;
+    }
+
+    // Get all segments potentially containing query results
+    std::set<segment_id_t> ids_of_segments_to_search;
+    for (auto& sub_query : query.get_sub_queries()) {
+        auto& ids_of_matching_segments = sub_query.get_ids_of_matching_segments();
+        ids_of_segments_to_search.insert(ids_of_matching_segments.cbegin(), ids_of_matching_segments.cend());
+    }
+
+    // Search segments
+    for (auto segment_id : ids_of_segments_to_search) {
+        archive_reader.open_table_manager(segment_id);
+        auto result = search_segments(query, archive_reader, segment_id, query_cancelled, controller_socket_fd);
+        archive_reader.close_table_manager();
+        if (SearchFilesResult::ResultSendFailure == result) {
+            // Stop search now since results aren't reaching the controller
+            break;
+        }
+    }
 
     archive_reader.close();
 

@@ -87,14 +87,14 @@ namespace streaming_archive::reader::glt {
             return m_num_columns;
         }
 
-    private:
-
         /**
          * Open and load the 2D variable columns starting at buffer with compressed_size bytes
          * @param buffer
          * @param compressed_size
          */
         void load_all ();
+
+    private:
 
         size_t m_current_row;
         size_t m_num_row;

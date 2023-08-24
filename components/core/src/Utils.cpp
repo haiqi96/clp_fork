@@ -213,3 +213,96 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
 
     return ErrorCode_Success;
 }
+
+// This return the index that's before the first token which contains a variable
+size_t get_variable_front_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str) {
+    enum class VarDelim {
+        // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
+        NonDouble = 17,
+        Double = 18,
+        Length = 2,
+    };
+
+    size_t left_boundary = 0;
+    for(const auto& token: tokens) {
+        if (token == "*") {
+            continue;
+        }
+        size_t found = logtype_str.find(token);
+        if(found == std::string::npos) {
+            SPDLOG_ERROR("ERROR, this is potentially because string in {} can be also variable dictionary value", token);
+            throw;
+        }
+        size_t first_token_position = found;
+        if(first_token_position > left_boundary) {
+            left_boundary = first_token_position;
+        }
+
+        if(token.find((char)VarDelim::NonDouble) != std::string::npos || token.find((char)VarDelim::Double) != std::string::npos) {
+            // This means we found a token containing a variable, we should stop.
+            break;
+        }
+    }
+    return left_boundary;
+}
+
+size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str) {
+
+    enum class VarDelim {
+        // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
+        NonDouble = 17,
+        Double = 18,
+        Length = 2,
+    };
+
+    size_t right_boundary = UINT64_MAX;
+    for(auto iter = tokens.rbegin(); iter != tokens.rend(); iter++) {
+        const auto& token = (*iter);
+        if (token == "*") {
+            continue;
+        }
+        size_t found = logtype_str.rfind(token);
+        if(found == std::string::npos) {
+            SPDLOG_ERROR("SERIOUS ERROR");
+            throw;
+        }
+        // this position is actually the first char after the first token
+        size_t first_token_position = found;
+        if(first_token_position < right_boundary) {
+            // here we can always add the tokensize.
+            right_boundary = first_token_position + token.size();
+        }
+
+        if(token.find((char)VarDelim::NonDouble) != std::string::npos || token.find((char)VarDelim::Double) != std::string::npos) {
+            // This means we found a token containing a variable, we should stop.
+            break;
+        }
+    }
+    // This is the begin of the token, so the actual token is not included.
+    return right_boundary;
+}
+
+std::vector<std::string> split_wildcard(const std::string& input_str) {
+    size_t pos = 0;
+    std::vector<std::string> return_res;
+    std::string token;
+    std::string delim = "*";
+
+    auto start = 0U;
+    auto end = input_str.find(delim);
+    while (end != std::string::npos)
+    {
+        std::string matched = input_str.substr(start, end - start);
+        if(!matched.empty()){
+            return_res.push_back(matched);
+        }
+        return_res.push_back(delim);
+        start = end + delim.length();
+        end = input_str.find(delim, start);
+    }
+    // we should never see this, because the last token is always a * due to the natural of the query
+    if(start < input_str.size()) {
+        return_res.push_back(input_str.substr(start, end));
+    }
+    return return_res;
+}

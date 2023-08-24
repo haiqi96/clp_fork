@@ -4,6 +4,7 @@
 // C++ libraries
 #include <iostream>
 #include <filesystem>
+#include <map>
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
@@ -19,6 +20,8 @@
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 
+#include "../streaming_archive/reader/GLT/GLTArchive.hpp"
+
 using clg::CommandLineArguments;
 using compressor_frontend::load_lexer_from_file;
 using std::cout;
@@ -32,6 +35,7 @@ using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
 using streaming_archive::reader::clp::CLPArchive;
 using streaming_archive::reader::clp::CLPFile;
+using streaming_archive::reader::glt::GLTArchive;
 using streaming_archive::reader::Message;
 
 /**
@@ -42,14 +46,6 @@ using streaming_archive::reader::Message;
  */
 static bool open_archive (const string& archive_path, Archive& archive_reader);
 /**
- * Searches the archive with the given parameters
- * @param search_strings
- * @param command_line_args
- * @param archive
- * @return true on success, false otherwise
- */
-static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive, bool use_heuristic);
-/**
  * Opens a compressed file or logs any errors if it couldn't be opened
  * @param file_metadata_ix
  * @param archive
@@ -57,6 +53,20 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
  * @return true on success, false otherwise
  */
 static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, CLPArchive& archive, CLPFile& compressed_file);
+/**
+ *
+ * @param search_strings
+ * @param command_line_args
+ * @param archive
+ * @param forward_lexer
+ * @param reverse_lexer
+ * @param use_heuristic
+ * @param num_matches
+ * @return
+ */
+static bool search_glt_archive (const vector<string>& search_strings, const CommandLineArguments& command_line_args, GLTArchive& archive,
+                                compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer,
+                                bool use_heuristic, size_t& num_matches);
 /**
  * Searches all files referenced by a given database cursor
  * @param queries
@@ -83,6 +93,25 @@ static void print_result_text (const string& orig_file_path, const Message& comp
  * @param custom_arg Unused
  */
 static void print_result_binary (const string& orig_file_path, const Message& compressed_msg, const string& decompressed_msg, void* custom_arg);
+/**
+ * To update
+ * @param queries
+ * @param output_method
+ * @param archive
+ * @param segment_id
+ * @return The total number of matches found across all files
+ */
+static size_t search_glt_segments (vector<Query>& queries, CommandLineArguments::OutputMethod output_method, GLTArchive& archive,size_t segment_id);
+/**
+ * get all messages in the segment within query's time range
+ * if query doesn't have a time range, outputs all messages
+ * @param query
+ * @param output_method
+ * @param archive
+ * @param segment_id
+ * @return The total number of matches found across all files
+ */
+static size_t find_message_in_glt_segment_within_time_range (const Query& query, CommandLineArguments::OutputMethod output_method, GLTArchive& archive);
 
 /**
  * Gets an archive iterator for the given file path or for all files if the file path is empty
@@ -137,9 +166,9 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
     return true;
 }
 
-
-static bool search_clp_archive (const vector<string>& search_strings, const CommandLineArguments& command_line_args, CLPArchive& archive,
-                                compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
+static bool search_glt_archive (const vector<string>& search_strings, const CommandLineArguments& command_line_args, GLTArchive& archive,
+                                compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer,
+                                bool use_heuristic, size_t& num_matches) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -178,14 +207,156 @@ static bool search_clp_archive (const vector<string>& search_strings, const Comm
         }
 
         if (!no_queries_match) {
-            size_t num_matches;
+            if (is_superseding_query) {
+                for (auto segment_id : archive.get_valid_segment()) {
+                    archive.open_table_manager(segment_id);
+                    // There should be only one query for a superceding query case
+                    const auto& query = queries.at(0);
+                    num_matches += find_message_in_glt_segment_within_time_range(query, command_line_args.get_output_method(), archive);
+                    archive.close_table_manager();
+                }
+            } else {
+                for (auto segment_id : ids_of_segments_to_search) {
+                    archive.open_table_manager(segment_id);
+                    num_matches += search_glt_segments(queries, command_line_args.get_output_method(), archive, segment_id);
+                    archive.close_table_manager();
+                }
+            }
+            SPDLOG_DEBUG("# matches found: {}", num_matches);
+        }
+    } catch (TraceableException& e) {
+        error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Search failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
+            return false;
+        } else {
+            SPDLOG_ERROR("Search failed: {}:{} {}, error_code={}", e.get_filename(), e.get_line_number(), e.what(), error_code);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static size_t find_message_in_glt_segment_within_time_range (const Query& query, const CommandLineArguments::OutputMethod output_method, GLTArchive& archive)
+{
+    size_t num_matches = 0;
+
+    // Setup output method
+    Grep::OutputFunc output_func;
+    void* output_func_arg;
+    switch (output_method) {
+        case CommandLineArguments::OutputMethod::StdoutText:
+            output_func = print_result_text;
+            output_func_arg = nullptr;
+            break;
+        case CommandLineArguments::OutputMethod::StdoutBinary:
+            output_func = print_result_binary;
+            output_func_arg = nullptr;
+            break;
+        default:
+            SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
+            return num_matches;
+    }
+    num_matches = Grep::output_message_in_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
+    num_matches += Grep::output_message_in_combined_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
+    return num_matches;
+
+}
+
+static size_t search_glt_segments (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, GLTArchive& archive, size_t segment_id)
+{
+    size_t num_matches = 0;
+
+    // Setup output method
+    Grep::OutputFunc output_func;
+    void* output_func_arg;
+    switch (output_method) {
+        case CommandLineArguments::OutputMethod::StdoutText:
+            output_func = print_result_text;
+            output_func_arg = nullptr;
+            break;
+        case CommandLineArguments::OutputMethod::StdoutBinary:
+            output_func = print_result_binary;
+            output_func_arg = nullptr;
+            break;
+        default:
+            SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
+            return num_matches;
+    }
+
+    for (auto& query : queries) {
+        query.make_sub_queries_relevant_to_segment(segment_id);
+        // here convert old queries to new query type
+        // The new query is a set of new subqueries ordered by logtype -> std::map<logtype_dictionary_id_t, LogtypeQueries>
+        auto converted_logtype_based_queries = Grep::get_converted_logtype_query(query, segment_id);
+        // use a vector to hold queries so they are sorted based on the ascending or descending order of their size,
+        // i.e. the order they appear in the segment.
+        std::vector<LogtypeQueries> single_table_queries;
+        // first level index is basically combined table index
+        // because we might not search through all combined tables, the first level is a map instead of a vector.
+        std::map<combined_table_id_t, std::vector<LogtypeQueries>> combined_table_queires;
+        archive.get_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
+
+        // first search through the single variable table
+        //num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        num_matches += Grep::search_segment_optimized_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        for(const auto& iter : combined_table_queires) {
+            combined_table_id_t table_id = iter.first;
+            const auto& combined_logtype_queries = iter.second;
+            num_matches += Grep::search_combined_table_and_output(table_id, combined_logtype_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        }
+    }
+    return num_matches;
+}
+
+static bool search_clp_archive (const vector<string>& search_strings, const CommandLineArguments& command_line_args, CLPArchive& archive,
+                                compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic, size_t& num_matches) {
+    ErrorCode error_code;
+    auto search_begin_ts = command_line_args.get_search_begin_ts();
+    auto search_end_ts = command_line_args.get_search_end_ts();
+
+    try {
+        vector<Query> queries;
+        bool no_queries_match = true;
+        std::set<segment_id_t> ids_of_segments_to_search;
+        bool is_superseding_query = false;
+        for (const auto& search_string : search_strings) {
+            Query query;
+            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer,
+                                        reverse_lexer, use_heuristic)) {
+                //if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, parser)) {
+                no_queries_match = false;
+
+                if (query.contains_sub_queries() == false) {
+                    // Search string supersedes all other possible search strings
+                    is_superseding_query = true;
+                    // Remove existing queries since they are superseded by this one
+                    queries.clear();
+                    // Add this query
+                    queries.push_back(query);
+                    // All other search strings will be superseded by this one, so break
+                    break;
+                }
+
+                queries.push_back(query);
+
+                // Add query's matching segments to segments to search
+                for (auto& sub_query : query.get_sub_queries()) {
+                    auto& ids_of_matching_segments = sub_query.get_ids_of_matching_segments();
+                    ids_of_segments_to_search.insert(ids_of_matching_segments.cbegin(), ids_of_matching_segments.cend());
+                }
+            }
+        }
+
+        if (!no_queries_match) {
             if (is_superseding_query) {
                 auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path());
-                num_matches = search_clp_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
+                num_matches += search_clp_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
             } else {
                 auto file_metadata_ix_ptr = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
-                num_matches = search_clp_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                num_matches += search_clp_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
                 for (auto segment_id : ids_of_segments_to_search) {
                     file_metadata_ix.set_segment_id(segment_id);
                     num_matches += search_clp_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
@@ -365,7 +536,7 @@ static void generater_lexer(const std::filesystem::path& schema_file_path,
     }
 }
 
-static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, const CommandLineArguments& command_line_args,
+static int search_glt(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, const CommandLineArguments& command_line_args,
                       const std::filesystem::path& archives_dir, const std::vector<string>& search_strings) {
     /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
     std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
@@ -376,9 +547,16 @@ static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, 
     compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
 
     string archive_id;
-    CLPArchive archive_reader;
-    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db_ptr, command_line_args.get_file_path()));
-         archive_ix->contains_element(); archive_ix->get_next())
+    GLTArchive archive_reader;
+    size_t num_matches = 0;
+    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(
+                 *global_metadata_db_ptr,
+                 command_line_args.get_file_path(),
+                 command_line_args.get_search_begin_ts(),
+                 command_line_args.get_search_end_ts()
+         ));
+         archive_ix->contains_element();
+         archive_ix->get_next())
     {
         archive_ix->get_id(archive_id);
         auto archive_path = archives_dir / archive_id;
@@ -404,12 +582,67 @@ static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, 
         }
 
         // Perform search
-        if (!search_clp_archive(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
+        if (!search_glt_archive(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic, num_matches)) {
             return -1;
         }
         archive_reader.close();
     }
+    std::cout << "Total number of matches " << num_matches << std::endl;
+    return 0;
+}
 
+static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, const CommandLineArguments& command_line_args,
+                      const std::filesystem::path& archives_dir, const std::vector<string>& search_strings) {
+    /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
+    compressor_frontend::lexers::ByteLexer one_time_use_forward_lexer;
+    compressor_frontend::lexers::ByteLexer one_time_use_reverse_lexer;
+    compressor_frontend::lexers::ByteLexer* forward_lexer_ptr;
+    compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
+
+    string archive_id;
+    CLPArchive archive_reader;
+    size_t num_matches = 0;
+    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(
+                 *global_metadata_db_ptr,
+                 command_line_args.get_file_path(),
+                 command_line_args.get_search_begin_ts(),
+                 command_line_args.get_search_end_ts()
+         ));
+         archive_ix->contains_element();
+         archive_ix->get_next())
+    {
+        archive_ix->get_id(archive_id);
+        auto archive_path = archives_dir / archive_id;
+
+        if (false == std::filesystem::exists(archive_path)) {
+            SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
+            continue;
+        }
+
+        // Open archive
+        if (!open_archive(archive_path.string(), archive_reader)) {
+            return -1;
+        }
+
+        // Generate lexer if schema file exists
+        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+        bool use_heuristic = true;
+        if (std::filesystem::exists(schema_file_path)) {
+            use_heuristic = false;
+            generater_lexer(schema_file_path, forward_lexer_map, reverse_lexer_map,
+                            one_time_use_forward_lexer, one_time_use_reverse_lexer,
+                            forward_lexer_ptr, reverse_lexer_ptr);
+        }
+
+        // Perform search
+        if (!search_clp_archive(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic, num_matches)) {
+            return -1;
+        }
+        archive_reader.close();
+    }
+    std::cout << "Total number of matches " << num_matches << std::endl;
     return 0;
 }
 
@@ -485,7 +718,7 @@ int main (int argc, const char* argv[]) {
             break;
     }
     global_metadata_db->open();
-    if (search_clp(global_metadata_db, command_line_args, archives_dir, search_strings)) {
+    if (search_glt(global_metadata_db, command_line_args, archives_dir, search_strings)) {
         return -1;
     }
 
