@@ -418,7 +418,7 @@ int main (int argc, const char* argv[]) {
 
     int return_value = 0;
     try {
-        if (false == search_clp_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
+        if (false == search_glt_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
                                         controller_socket_fd))
         {
             return_value = -1;

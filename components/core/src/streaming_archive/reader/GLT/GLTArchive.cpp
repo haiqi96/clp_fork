@@ -5,6 +5,16 @@
 #include "../../../EncodedVariableInterpreter.hpp"
 
 namespace streaming_archive::reader::glt {
+    static void insert_ts(std::string& decompressed_msg, epochtime_t ts_in_mili) {
+        if (0 != ts_in_mili) {
+            std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
+            TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
+            ts_pattern.insert_formatted_timestamp(
+                    ts_in_mili,
+                    decompressed_msg
+            );
+        }
+    }
     void GLTArchive::open_derived (const std::string& path) {
         m_metadata_db = std::make_unique<GLTMetadataDB>();
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
@@ -206,6 +216,7 @@ namespace streaming_archive::reader::glt {
                 SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", logtype_id);
                 return ErrorCode_Failure;
             }
+            insert_ts(decompressed_msg, ts[ix]);
 
             // Perform wildcard match if required
             // Check if:
@@ -248,9 +259,7 @@ namespace streaming_archive::reader::glt {
                 SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", logtype_id);
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             }
-            const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
-            TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
-            ts_pattern.insert_formatted_timestamp(ts[ix], decompressed_msg);
+            insert_ts(decompressed_msg, ts[ix]);
 
             // Perform wildcard match if required
             // Check if:
@@ -282,9 +291,7 @@ namespace streaming_archive::reader::glt {
             SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", compressed_msg.get_logtype_id());
             return false;
         }
-        const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
-        TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
-        ts_pattern.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
+        insert_ts(decompressed_msg, compressed_msg.get_ts_in_milli());
         return true;
     }
 }

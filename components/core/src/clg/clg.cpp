@@ -587,7 +587,7 @@ static int search_glt(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, 
         }
         archive_reader.close();
     }
-    std::cout << "Total number of matches " << num_matches << std::endl;
+    //std::cout << "Total number of matches " << num_matches << std::endl;
     return 0;
 }
 
@@ -642,7 +642,7 @@ static int search_clp(std::shared_ptr<GlobalMetadataDB> global_metadata_db_ptr, 
         }
         archive_reader.close();
     }
-    std::cout << "Total number of matches " << num_matches << std::endl;
+    //std::cout << "Total number of matches " << num_matches << std::endl;
     return 0;
 }
 
