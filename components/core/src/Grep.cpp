@@ -154,23 +154,39 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             if (!converts_to_non_dict_var) {
                 // Dictionary variable
-                // Actually this is incorrect, because it's possible user enters 23412*34 aiming to
-                // match 23412.34. This should be an ambiguios type.
+                // HACK: Actually this is incorrect, because it's possible user enters 23412*34 aiming to
+                // match 23412.34. This should be an ambiguous type.
+                // Ideally, while parsing the variable, there should be a similar boolean as
+                // is_var that track if all chars in the token are integer.
+                // But now I will just leave it in consistent with CLG.
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
-                // HACK: Need to rethink about this part.
                 if (converts_to_int) {
-                    m_type = Type::Ambiguous;
-                    m_possible_types.push_back(Type::DictionaryVar);
-                    m_possible_types.push_back(Type::IntVar);
-                    m_cannot_convert_to_non_dict_var = false;
+                    if (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard) {
+                        // if there is prefix or suffix wildcard, then the integer could be
+                        // a part of the float, or dictionary variable
+                        m_type = Type::Ambiguous;
+                        m_possible_types.push_back(Type::IntVar);
+                        m_possible_types.push_back(Type::FloatVar);
+                        m_possible_types.push_back(Type::DictionaryVar);
+                    } else {
+                        m_type = Type::IntVar;
+                        m_possible_types.push_back(Type::IntVar);
+                    }
                 } else {
-                    // else converts_to_double = true
-                    m_type = Type::FloatVar;
-                    m_possible_types.push_back(Type::FloatVar);
-                    m_cannot_convert_to_non_dict_var = false;
+                    if (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard) {
+                        // if there is prefix or suffix wildcard, then the float could be
+                        // a part of a dictionary variable
+                        m_type = Type::Ambiguous;
+                        m_possible_types.push_back(Type::FloatVar);
+                        m_possible_types.push_back(Type::DictionaryVar);
+                    } else {
+                        m_type = Type::FloatVar;
+                        m_possible_types.push_back(Type::FloatVar);
+                    }
                 }
+                m_cannot_convert_to_non_dict_var = false;
             }
         }
     }
