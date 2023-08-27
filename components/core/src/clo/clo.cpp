@@ -107,9 +107,8 @@ static bool search_clp_archive (const CommandLineArguments& command_line_args, c
 static bool search_glt_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
                                 const std::atomic_bool& query_cancelled, int controller_socket_fd);
 
-
-static SearchFilesResult search_segments (Query& query, GLTArchive& archive, size_t segment_id,
-                                          const std::atomic_bool& query_cancelled, int controller_socket_fd)
+static SearchFilesResult search_segments_optimized (Query& query, GLTArchive& archive, size_t segment_id,
+                                                    const std::atomic_bool& query_cancelled, int controller_socket_fd)
 {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -127,7 +126,7 @@ static SearchFilesResult search_segments (Query& query, GLTArchive& archive, siz
     std::map<combined_table_id_t, std::vector<LogtypeQueries>> combined_table_queires;
     archive.get_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
 
-    ErrorCode error_code = Grep::search_segment_and_send_results_optimized(single_table_queries, query, SIZE_MAX, archive, query_cancelled, controller_socket_fd);
+    ErrorCode error_code = Grep::search_segment_and_send_results(single_table_queries, query, SIZE_MAX, archive, query_cancelled, controller_socket_fd);
     if (ErrorCode_Success != error_code) {
         result = SearchFilesResult::ResultSendFailure;
         return result;
@@ -367,7 +366,7 @@ static bool search_glt_archive (const CommandLineArguments& command_line_args, c
     // Search segments
     for (auto segment_id : ids_of_segments_to_search) {
         archive_reader.open_table_manager(segment_id);
-        auto result = search_segments(query, archive_reader, segment_id, query_cancelled, controller_socket_fd);
+        auto result = search_segments_optimized(query, archive_reader, segment_id, query_cancelled, controller_socket_fd);
         archive_reader.close_table_manager();
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller

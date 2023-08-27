@@ -858,7 +858,7 @@ size_t Grep::output_message_in_combined_segment_within_time_range (const Query& 
     return num_matches;
 }
 
-size_t Grep::search_segment_all_columns_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, GLTArchive& archive, OutputFunc output_func, void* output_func_arg) {
+size_t Grep::search_segment_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, GLTArchive& archive, OutputFunc output_func, void* output_func_arg) {
     size_t num_matches = 0;
 
     GLTMessage compressed_msg;
@@ -973,8 +973,9 @@ size_t Grep::search_combined_table_and_output (combined_table_id_t table_id, con
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
-        size_t left_boundary, right_boundary;
-        Grep::get_boundaries(queries_by_logtype, left_boundary, right_boundary);
+        size_t left_boundary{0}, right_boundary{num_vars};
+        //HACK: disable this for now.
+        //Grep::get_boundaries(queries_by_logtype, left_boundary, right_boundary);
 
         bool required_wild_card;
         while(num_matches < limit) {
@@ -1127,6 +1128,71 @@ size_t Grep::search (const Query& query, size_t limit, CLPArchive& archive, CLPF
     return num_matches;
 }
 
+ErrorCode Grep::search_segment_and_send_results (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, GLTArchive& archive, const std::atomic_bool& query_cancelled, int controller_socket_fd) {
+    size_t num_matches = 0;
+    ErrorCode error_code = ErrorCode_Success;
+
+    GLTMessage compressed_msg;
+    string decompressed_msg;
+
+    // Go through each logtype
+    for(const auto& query_for_logtype: queries) {
+        if(query_cancelled) {
+            break;
+        }
+        size_t logtype_matches = 0;
+        // preload the data
+        auto logtype_id = query_for_logtype.m_logtype_id;
+        const auto& sub_queries = query_for_logtype.m_queries;
+        archive.get_table_manager().load_single_table(logtype_id);
+        archive.get_table_manager().load_all();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_vars();
+        compressed_msg.resize_var(num_vars);
+        compressed_msg.set_logtype_id(logtype_id);
+
+        while(num_matches < limit) {
+            if(query_cancelled) {
+                break;
+            }
+            // Find matching message
+            bool required_wild_card = false;
+            bool found_matched = archive.find_message_matching_with_logtype_query(sub_queries,compressed_msg, required_wild_card, query);
+            if (found_matched == false) {
+                break;
+            }
+            // Decompress match
+            bool decompress_successful = archive.decompress_message_with_fixed_timestamp_pattern(compressed_msg, decompressed_msg);
+            if (!decompress_successful) {
+                break;
+            }
+
+            // Perform wildcard match if required
+            // Check if:
+            // - Sub-query requires wildcard match, or
+            // - no subqueries exist and the search string is not a match-all
+            if ((query.contains_sub_queries() && required_wild_card) ||
+                (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+                bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                                     query.get_ignore_case() == false);
+                if (!matched) {
+                    continue;
+                }
+            }
+            std::string orig_file_path = archive.get_file_name(compressed_msg.get_file_id());
+            msgpack::type::tuple<std::string, epochtime_t, std::string> src(orig_file_path, compressed_msg.get_ts_in_milli(), decompressed_msg);
+            msgpack::sbuffer m;
+            msgpack::pack(m, src);
+            ErrorCode ret = networking::try_send(controller_socket_fd, m.data(), m.size());
+            if(ret != ErrorCode_Success) {
+                return ret;
+            }
+        }
+        archive.get_table_manager().close_single_table();
+        num_matches += logtype_matches;
+    }
+
+    return error_code;
+}
 
 // not ready yet
 ErrorCode Grep::search_segment_and_send_results_optimized (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, GLTArchive& archive, const std::atomic_bool& query_cancelled, int controller_socket_fd) {
@@ -1190,8 +1256,9 @@ ErrorCode Grep::search_combined_table_and_send_results (combined_table_id_t tabl
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
-        size_t left_boundary, right_boundary;
-        Grep::get_boundaries(queries_by_logtype, left_boundary, right_boundary);
+        size_t left_boundary{0}, right_boundary{num_vars};
+        // HACK: disable it like this
+        //Grep::get_boundaries(queries_by_logtype, left_boundary, right_boundary);
 
         bool required_wild_card;
         while(query_cancelled == false) {

@@ -99,7 +99,7 @@ public:
      * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search_segment_all_columns_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
+    static size_t search_segment_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
                                                         OutputFunc output_func, void* output_func_arg);
 
     /**
@@ -117,12 +117,14 @@ public:
      */
     static size_t search_segment_optimized_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
                                                       OutputFunc output_func, void* output_func_arg);
+    static ErrorCode search_segment_and_send_results (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
+                                                      const std::atomic_bool& query_cancelled, int controller_socket_fd);
 
     static ErrorCode search_segment_and_send_results_optimized (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
-                                                             const std::atomic_bool& query_cancelled, int controller_socket_fd);
+                                                                const std::atomic_bool& query_cancelled, int controller_socket_fd);
 
     static size_t search_combined_table_and_output (combined_table_id_t table_id, const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, streaming_archive::reader::glt::GLTArchive& archive,
-                                                   OutputFunc output_func, void* output_func_arg);
+                                                    OutputFunc output_func, void* output_func_arg);
 
     static ErrorCode search_combined_table_and_send_results (combined_table_id_t table_id, const std::vector<LogtypeQueries>& queries, const Query& query,
                                                             size_t limit, streaming_archive::reader::glt::GLTArchive& archive, const std::atomic_bool& query_cancelled, int controller_socket_fd);
