@@ -16,7 +16,7 @@ namespace streaming_archive::reader::glt {
 
     void LogtypeTableManager::close () {
         if(!m_is_open) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+            return;
         }
         m_is_open = false;
         m_memory_mapped_segment_file.close();

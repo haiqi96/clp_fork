@@ -27,6 +27,9 @@ namespace streaming_archive::reader::glt {
     void GLTArchive::close_derived () {
         m_metadata_db->close();
         m_filename_dict.clear();
+        m_segment.close();
+        m_message_order_table.close();
+        m_current_segment_id = INT64_MAX;
     }
 
     ErrorCode GLTArchive::open_file (GLTFile& file, MetadataDB::FileIterator& file_metadata_ix) {

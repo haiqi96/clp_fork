@@ -96,7 +96,6 @@ namespace streaming_archive::reader::glt {
     void CombinedLogtypeTable::open_preloaded_logtype_table(logtype_dictionary_id_t logtype_id, const std::unordered_map<logtype_dictionary_id_t, CombinedMetadata>& metadata) {
         // add decompressor to the correct offset
         const auto& logtype_metadata = metadata.at(logtype_id);
-        assert(logtype_metadata.combined_table_id == m_current_table_id);
         size_t table_offset = logtype_metadata.offset;
 
         // variable initialization
@@ -158,7 +157,6 @@ namespace streaming_archive::reader::glt {
 
         // add decompressor to the correct offset
         const auto& logtype_metadata = metadata.at(logtype_id);
-        assert(logtype_metadata.combined_table_id == m_current_table_id);
 
         // variable initialization
         m_current_row = 0;
@@ -220,7 +218,7 @@ namespace streaming_archive::reader::glt {
 
     void CombinedLogtypeTable::close () {
         assert(m_is_open == true);
-        assert(m_is_logtype_open == true);
+        assert(m_is_logtype_open == false);
         m_is_open = false;
     }
 
