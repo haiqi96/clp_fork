@@ -182,6 +182,9 @@ namespace streaming_archive::writer {
         const boost::uuids::uuid& get_id () const { return m_id; }
         const std::string& get_id_as_string () const { return m_id_as_string; }
 
+        virtual void write_log_event_ir(ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event) = 0;
+        virtual void write_log_event_ir(ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event) = 0;
+
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
 
     protected:

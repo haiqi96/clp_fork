@@ -28,6 +28,9 @@ namespace streaming_archive::writer {
                                      uint32_t uncompressed_msg_pos, bool has_delimiter,
                                      bool has_timestamp) override;
 
+        virtual void write_log_event_ir(ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event) override;
+        virtual void write_log_event_ir(ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event) override;
+
         void append_file_to_segment () override;
         /**
          * Appends the content of the current encoded file to the given segment

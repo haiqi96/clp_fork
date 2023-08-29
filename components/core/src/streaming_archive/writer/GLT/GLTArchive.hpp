@@ -48,6 +48,15 @@ namespace streaming_archive::writer {
                                                       ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
+        /**
+         * Writes an IR log event to the current encoded file
+         * @tparam encoded_variable_t The type of the encoded variables in the
+         * log event
+         * @param log_event
+         */
+        virtual void write_log_event_ir(ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event) override;
+        virtual void write_log_event_ir(ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event) override;
+
     private:
 
         // Methods
