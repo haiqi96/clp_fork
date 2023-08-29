@@ -23,6 +23,7 @@ namespace streaming_archive::writer {
         try {
             m_filename_dict_writer.open(file_id_file_path,
                                         FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+            m_filename_dict_compressor.open(m_filename_dict_writer);
         } catch (FileWriter::OperationFailed& e) {
             SPDLOG_CRITICAL("Failed to create file: {}", file_id_file_path.c_str());
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -40,7 +41,7 @@ namespace streaming_archive::writer {
             m_logtype_ids_in_segment.clear();
             m_var_ids_in_segment.clear();
         }
-        m_filename_dict_writer.flush();
+        m_filename_dict_compressor.close();
         m_filename_dict_writer.close();
     }
 
@@ -54,7 +55,7 @@ namespace streaming_archive::writer {
         m_file = m_glt_file;
         m_file->open();
         std::string file_name_to_write = path + '\n';
-        m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
+        m_filename_dict_compressor.write(file_name_to_write.c_str(), file_name_to_write.size());
     }
 
     void GLTArchive::write_msg (epochtime_t timestamp, const std::string& message,

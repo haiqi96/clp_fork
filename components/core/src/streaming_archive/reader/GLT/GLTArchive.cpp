@@ -87,11 +87,17 @@ namespace streaming_archive::reader::glt {
     void GLTArchive::load_filename_dict () {
         FileReader filename_dict_reader;
         std::string filename_dict_path = m_path + '/' + cFileNameDictFilename;
-        filename_dict_reader.open(filename_dict_path);
+#if USE_PASSTHROUGH_COMPRESSION
+        streaming_compression::passthrough::Decompressor m_filename_dict_decompressor;
+#elif USE_ZSTD_COMPRESSION
+        streaming_compression::zstd::Decompressor m_filename_dict_decompressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
+#endif
+        m_filename_dict_decompressor.open(filename_dict_path);
         std::string file_name;
-
         while(true) {
-            auto errorcode = filename_dict_reader.try_read_to_delimiter('\n',false, false, file_name);
+            auto errorcode = m_filename_dict_decompressor.try_read_to_delimiter('\n',false, false, file_name);
             if (errorcode == ErrorCode_Success) {
                 m_filename_dict.push_back(file_name);
             } else if (errorcode == ErrorCode_EndOfFile) {
@@ -101,7 +107,7 @@ namespace streaming_archive::reader::glt {
                 throw OperationFailed(errorcode, __FILENAME__, __LINE__);
             }
         }
-        filename_dict_reader.close();
+        m_filename_dict_decompressor.close();
     }
 
     void GLTArchive::update_valid_segment_ids () {

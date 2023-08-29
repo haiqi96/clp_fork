@@ -77,7 +77,13 @@ namespace streaming_archive::writer {
         // TODO: remove this after file id is integrated
         // into the database schema
         FileWriter m_filename_dict_writer;
-
+#if USE_PASSTHROUGH_COMPRESSION
+        streaming_compression::passthrough::Compressor m_filename_dict_compressor;
+#elif USE_ZSTD_COMPRESSION
+        streaming_compression::zstd::Compressor m_filename_dict_compressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
+#endif
         GLTSegment m_glt_segment;
         GLTFile* m_glt_file;
         Segment m_message_order_table;
