@@ -19,6 +19,7 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
+#include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"
