@@ -47,7 +47,7 @@ namespace streaming_archive::writer {
         m_logtypes->push_back(logtype_id);
         // For each file, the offset is only needed for a
         // logtype's first occurrence. else set to 0
-        // TODO: create a separate id->first_offset map
+        // GLT TODO: create a separate id->first_offset map
         // per file to avoid storing duplicated 0
         if (m_logtype_id_occurance.count(logtype_id) == 0) {
             m_logtype_id_occurance.insert(logtype_id);

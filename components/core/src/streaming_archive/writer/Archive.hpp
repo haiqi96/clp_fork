@@ -305,7 +305,7 @@ namespace streaming_archive::writer {
 
         // GLT related data variables
         double m_combine_threshold;
-        // TODO: remove this after file id is integrated
+        // GLT TODO: remove this after file id is integrated
         // into the database schema
         FileWriter m_filename_dict_writer;
 

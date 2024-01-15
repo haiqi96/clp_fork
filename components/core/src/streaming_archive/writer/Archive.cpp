@@ -468,7 +468,7 @@ namespace streaming_archive::writer {
         if (m_file == nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        // Haiqi TODO: this open logic is counter intuitive for glt_segment
+        // GLT TODO: this open logic is counter intuitive for glt_segment
         // because the open happens after file content gets appended
         // to m_glt_segment.
         if (!m_message_order_table.is_open()) {
