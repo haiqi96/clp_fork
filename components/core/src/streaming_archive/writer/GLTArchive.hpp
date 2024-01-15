@@ -4,7 +4,7 @@
 // Project headers
 #include "Archive.hpp"
 #include "Segment.hpp"
-#include "GLTFile.hpp"
+#include "File.hpp"
 #include "GLTSegment.hpp"
 
 namespace streaming_archive::writer {
@@ -70,7 +70,6 @@ namespace streaming_archive::writer {
         FileWriter m_filename_dict_writer;
 
         GLTSegment m_glt_segment;
-        GLTFile* m_glt_file;
         Segment m_message_order_table;
 
     };

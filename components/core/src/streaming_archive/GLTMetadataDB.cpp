@@ -1,7 +1,7 @@
 #include "GLTMetadataDB.hpp"
 
 // Project headers
-#include "writer/GLTFile.hpp"
+#include "writer/File.hpp"
 
 using std::back_insert_iterator;
 using std::make_pair;
@@ -69,7 +69,7 @@ namespace streaming_archive {
 
     void GLTMetadataDB::bind_storage_specific_fields (writer::File* file) {
 
-        writer::GLTFile* glt_file_ptr = dynamic_cast<writer::GLTFile*>(file);
+        auto* glt_file_ptr = dynamic_cast<writer::File*>(file);
 
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(GLTFilesTableFieldIndexes::SegmentLogtypesPosition) + 1,

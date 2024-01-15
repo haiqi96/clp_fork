@@ -301,8 +301,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLTArchive.cpp
         src/streaming_archive/writer/GLTArchive.hpp
-        src/streaming_archive/writer/GLTFile.cpp
-        src/streaming_archive/writer/GLTFile.hpp
         src/streaming_archive/writer/GLTSegment.cpp
         src/streaming_archive/writer/GLTSegment.hpp
         src/streaming_archive/writer/LogtypeTable.cpp
@@ -459,8 +457,6 @@ set(SOURCE_FILES_clg
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/GLTFile.cpp
-        src/streaming_archive/writer/GLTFile.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
@@ -602,8 +598,6 @@ set(SOURCE_FILES_clo
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/GLTFile.cpp
-        src/streaming_archive/writer/GLTFile.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
@@ -824,8 +818,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLTArchive.cpp
         src/streaming_archive/writer/GLTArchive.hpp
-        src/streaming_archive/writer/GLTFile.cpp
-        src/streaming_archive/writer/GLTFile.hpp
         src/streaming_archive/writer/GLTSegment.cpp
         src/streaming_archive/writer/GLTSegment.hpp
         src/streaming_archive/writer/LogtypeTable.cpp
