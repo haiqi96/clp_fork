@@ -20,7 +20,8 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/Token.hpp"
-#include "../MetadataDB.hpp"
+#include "../GLTMetadataDB.hpp"
+#include "GLTSegment.hpp"
 
 namespace streaming_archive::writer {
     class Archive {
@@ -74,7 +75,7 @@ namespace streaming_archive::writer {
                 old_ts_pattern(), m_schema_file_path() {}
 
         // Destructor
-        virtual ~Archive ();
+        ~Archive ();
 
         // Methods
         /**
@@ -86,12 +87,6 @@ namespace streaming_archive::writer {
          */
         void open (const UserConfig& user_config);
         /**
-         * Call open from derived class to create its own directory structure and initialize its own class variables
-         * @param user_config Settings configurable by the user
-         * @throw Same as defined in derived class
-         */
-        virtual void open_derived(const UserConfig& user_config) = 0;
-        /**
          * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
          * @throw streaming_archive::writer::Archive::OperationFailed if any empty directories could not be removed
@@ -100,11 +95,6 @@ namespace streaming_archive::writer {
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
          */
         void close ();
-        /**
-         * Closes the data structure in the derived class and writes its snapshot
-         * @throw Same as defined in derived class
-         */
-        virtual void close_derived() = 0;
 
         /**
          * Creates and opens a file with the given path
@@ -114,8 +104,8 @@ namespace streaming_archive::writer {
          * @param split_ix
          * @return Pointer to the new file
          */
-        virtual void create_and_open_file (const std::string& path, group_id_t group_id,
-                                           const boost::uuids::uuid& orig_file_id, size_t split_ix) = 0;
+        void create_and_open_file (const std::string& path, group_id_t group_id,
+                                   const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
         void close_file ();
 
@@ -139,7 +129,7 @@ namespace streaming_archive::writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        virtual void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes) = 0;
+        void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
 
         /**
          * Encodes and writes a message to the given file or segment using schema file
@@ -150,9 +140,9 @@ namespace streaming_archive::writer {
          * @param has_timestamp
          * @throw FileWriter::OperationFailed if any write fails
          */
-        virtual void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg,
-                                             uint32_t uncompressed_msg_pos, bool has_delimiter,
-                                             bool has_timestamp) = 0;
+        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg,
+                                     uint32_t uncompressed_msg_pos, bool has_delimiter,
+                                     bool has_timestamp);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
@@ -167,7 +157,7 @@ namespace streaming_archive::writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        virtual void append_file_to_segment () = 0;
+        void append_file_to_segment ();
 
         /**
          * Adds empty directories to the archive
@@ -181,7 +171,7 @@ namespace streaming_archive::writer {
 
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
 
-    protected:
+    private:
         // Types
         /**
          * Custom less-than comparator for sets to:
@@ -230,11 +220,37 @@ namespace streaming_archive::writer {
          * Gets the size of the portion of the archive that will not be changed
          * @return Size in bytes
          */
-        virtual size_t get_stable_size () const;
+        size_t get_stable_size () const;
         /**
          * Updates the archive's metadata
          */
         void update_metadata ();
+        /**
+         * Appends the message order table of the current encoded file to the given segment
+         * @param segment
+         * @param logtype_ids_in_segment
+         * @param var_ids_in_segment
+         * @param files_in_segment
+         */
+        void
+        append_file_contents_to_segment (Segment& message_order_table, GLTSegment& glt_segment,
+                                         ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                         ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
+                                         std::vector<File*>& files_in_segment);
+        /**
+         * Closes a given segment, persists the metadata of the files in the segment
+         * @param segment
+         * @param files
+         * @param segment_logtype_ids
+         * @param segment_var_ids
+         * @throw Same as streaming_archive::writer::CompressedStreamOnDisk::close
+         * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
+         */
+        void close_segment_and_persist_file_metadata (Segment& message_order_table,
+                                                      GLTSegment& glt_segment,
+                                                      std::vector<File*>& files,
+                                                      ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                      ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
         // Variables
         boost::uuids::uuid m_id;
@@ -279,13 +295,23 @@ namespace streaming_archive::writer {
 
         int m_compression_level;
 
-        std::unique_ptr<MetadataDB> m_metadata_db;
+        GLTMetadataDB m_metadata_db;
 
         FileWriter m_metadata_file_writer;
 
         GlobalMetadataDB* m_global_metadata_db;
 
         bool m_print_archive_stats_progress;
+
+        // GLT related data variables
+        double m_combine_threshold;
+        // TODO: remove this after file id is integrated
+        // into the database schema
+        FileWriter m_filename_dict_writer;
+
+        GLTSegment m_glt_segment;
+        Segment m_message_order_table;
+
     };
 }
 

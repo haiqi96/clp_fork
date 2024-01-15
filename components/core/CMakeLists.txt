@@ -299,8 +299,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/GLTArchive.cpp
-        src/streaming_archive/writer/GLTArchive.hpp
         src/streaming_archive/writer/GLTSegment.cpp
         src/streaming_archive/writer/GLTSegment.hpp
         src/streaming_archive/writer/LogtypeTable.cpp
@@ -816,8 +814,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/GLTArchive.cpp
-        src/streaming_archive/writer/GLTArchive.hpp
         src/streaming_archive/writer/GLTSegment.cpp
         src/streaming_archive/writer/GLTSegment.hpp
         src/streaming_archive/writer/LogtypeTable.cpp
