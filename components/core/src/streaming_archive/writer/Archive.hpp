@@ -20,7 +20,7 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/Token.hpp"
-#include "../GLTMetadataDB.hpp"
+#include "../MetadataDB.hpp"
 #include "GLTSegment.hpp"
 
 namespace streaming_archive::writer {
@@ -295,7 +295,7 @@ namespace streaming_archive::writer {
 
         int m_compression_level;
 
-        GLTMetadataDB m_metadata_db;
+        MetadataDB m_metadata_db;
 
         FileWriter m_metadata_file_writer;
 

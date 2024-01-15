@@ -10,6 +10,7 @@
 
 // Project headers
 #include "../SQLiteDB.hpp"
+#include "../type_utils.hpp"
 #include "writer/File.hpp"
 
 namespace streaming_archive {
@@ -89,6 +90,9 @@ namespace streaming_archive {
             bool is_split () const;
             size_t get_split_ix () const;
             segment_id_t get_segment_id () const;
+            // GLT specific
+            size_t get_segment_logtypes_pos () const;
+            size_t get_segment_offset_pos () const;
         };
 
         class EmptyDirectoryIterator : public Iterator {
@@ -131,14 +135,9 @@ namespace streaming_archive {
         }
         std::unique_ptr<EmptyDirectoryIterator> get_empty_directory_iterator () { return std::make_unique<EmptyDirectoryIterator>(m_db); }
 
-    protected:
+    private:
         // Methods to handle storage specific fields
-        virtual size_t get_field_size() = 0;
-        virtual void add_storage_specific_fields(std::vector<std::string>& field_names) = 0;
-        virtual void bind_storage_specific_fields(writer::File*) = 0;
-        virtual void add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types) = 0;
-        virtual void add_storage_specific_ordering(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
-        virtual void create_storage_specific_index(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
+        static size_t get_field_size() { return enum_to_underlying_type(FilesTableFieldIndexes::Length); }
 
         SQLitePreparedStatement get_files_select_statement (SQLiteDB& db, epochtime_t ts_begin, epochtime_t ts_end, const std::string& file_path, bool in_specific_segment, segment_id_t segment_id);
         void create_tables (const std::vector<std::pair<std::string, std::string>>& file_field_names_and_types, SQLiteDB& db);
@@ -157,6 +156,8 @@ namespace streaming_archive {
             IsSplit,
             SplitIx,
             SegmentId,
+            SegmentLogtypesPosition,
+            SegmentOffsetPosition,
             Length,
         };
 

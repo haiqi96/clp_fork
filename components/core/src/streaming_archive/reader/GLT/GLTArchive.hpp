@@ -2,7 +2,7 @@
 #define STREAMING_ARCHIVE_READER_GLT_ARCHIVE_HPP
 #include "../Archive.hpp"
 #include "GLTFile.hpp"
-#include "../../GLTMetadataDB.hpp"
+#include "../../MetadataDB.hpp"
 
 // Intended only for decompression.
 namespace streaming_archive::reader::glt {

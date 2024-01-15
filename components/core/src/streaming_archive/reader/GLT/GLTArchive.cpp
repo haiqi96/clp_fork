@@ -2,7 +2,7 @@
 
 namespace streaming_archive::reader::glt {
     void GLTArchive::open_derived (const std::string& path) {
-        m_metadata_db = std::make_unique<GLTMetadataDB>();
+        m_metadata_db = std::make_unique<MetadataDB>();
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
         m_metadata_db->open(metadata_db_path.string());
     }

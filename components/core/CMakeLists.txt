@@ -262,8 +262,6 @@ set(SOURCE_FILES_clp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/GLTMetadataDB.cpp
-        src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/LogtypeSizeTracker.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -439,8 +437,6 @@ set(SOURCE_FILES_clg
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/GLTMetadataDB.cpp
-        src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
@@ -580,8 +576,6 @@ set(SOURCE_FILES_clo
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/GLTMetadataDB.cpp
-        src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
@@ -778,8 +772,6 @@ set(SOURCE_FILES_unitTest
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/GLTMetadataDB.cpp
-        src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp

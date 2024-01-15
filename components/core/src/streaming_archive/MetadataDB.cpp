@@ -12,6 +12,7 @@ using std::make_unique;
 using std::string;
 using std::to_string;
 using std::vector;
+using std::make_pair;
 
 namespace streaming_archive {
     void MetadataDB::create_tables (const vector<std::pair<string, string>>& file_field_names_and_types, SQLiteDB& db) {
@@ -24,7 +25,11 @@ namespace streaming_archive {
         create_files_table.step();
         statement_buffer.clear();
 
-        create_storage_specific_index(statement_buffer_ix);
+        fmt::format_to(statement_buffer_ix,
+                       "CREATE INDEX IF NOT EXISTS files_segment_order ON {} ({},{})",
+                       streaming_archive::cMetadataDB::FilesTableName,
+                       streaming_archive::cMetadataDB::File::SegmentId,
+                       streaming_archive::cMetadataDB::File::SegmentLogtypesPosition);
         SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
         auto create_index_statement = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
         create_index_statement.step();
@@ -89,8 +94,8 @@ namespace streaming_archive {
         field_names[enum_to_underlying_type(FilesTableFieldIndexes::IsSplit)] = streaming_archive::cMetadataDB::File::IsSplit;
         field_names[enum_to_underlying_type(FilesTableFieldIndexes::SplitIx)] = streaming_archive::cMetadataDB::File::SplitIx;
         field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentId)] = streaming_archive::cMetadataDB::File::SegmentId;
-
-        add_storage_specific_fields(field_names);
+        field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition)] = streaming_archive::cMetadataDB::File::SegmentLogtypesPosition;
+        field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)] = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
 
         fmt::memory_buffer statement_buffer;
         auto statement_buffer_ix = std::back_inserter(statement_buffer);
@@ -127,7 +132,7 @@ namespace streaming_archive {
         }
 
         // Add ordering
-        add_storage_specific_ordering(statement_buffer_ix);
+        fmt::format_to(statement_buffer_ix, " ORDER BY {} ASC, {} ASC", streaming_archive::cMetadataDB::File::SegmentId, streaming_archive::cMetadataDB::File::SegmentLogtypesPosition);
 
         auto statement = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
         if (cEpochTimeMin != ts_begin) {
@@ -221,6 +226,16 @@ namespace streaming_archive {
         return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::SegmentId));
     }
 
+    size_t MetadataDB::FileIterator::get_segment_offset_pos () const {
+        return m_statement.column_int64(
+                enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition));
+    }
+
+    size_t MetadataDB::FileIterator::get_segment_logtypes_pos () const {
+        return m_statement.column_int64(
+                enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition));
+    }
+
     void MetadataDB::open (const string& path) {
         if (m_is_open) {
             throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
@@ -268,8 +283,15 @@ namespace streaming_archive {
         file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentId)].first = streaming_archive::cMetadataDB::File::SegmentId;
         file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentId)].second = "INTEGER";
 
-        add_storage_specific_field_names_and_types(file_field_names_and_types);
+        file_field_names_and_types[
+                enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition)
+        ] = make_pair(streaming_archive::cMetadataDB::File::SegmentLogtypesPosition,
+                      streaming_archive::cMetadataDB::DataType::Integer);
 
+        file_field_names_and_types[
+                enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)
+        ] = make_pair(streaming_archive::cMetadataDB::File::SegmentOffsetPosition,
+                      streaming_archive::cMetadataDB::DataType::Integer);
         create_tables(file_field_names_and_types, m_db);
 
         fmt::memory_buffer statement_buffer;
@@ -324,8 +346,12 @@ namespace streaming_archive {
             m_upsert_file_statement->bind_int64(enum_to_underlying_type(FilesTableFieldIndexes::IsSplit) + 1, (int64_t)file->is_split());
             m_upsert_file_statement->bind_int64(enum_to_underlying_type(FilesTableFieldIndexes::SplitIx) + 1, (int64_t)file->get_split_ix());
             m_upsert_file_statement->bind_int64(enum_to_underlying_type(FilesTableFieldIndexes::SegmentId) + 1, (int64_t)file->get_segment_id());
-            
-            bind_storage_specific_fields(file);
+            m_upsert_file_statement->bind_int64(
+                    enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition) + 1,
+                    (int64_t)file->get_segment_logtypes_pos());
+            m_upsert_file_statement->bind_int64(
+                    enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition) + 1,
+                    (int64_t)file->get_segment_offset_pos());
 
             m_upsert_file_statement->step();
             m_upsert_file_statement->reset();

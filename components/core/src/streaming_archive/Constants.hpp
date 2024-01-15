@@ -46,15 +46,8 @@ namespace streaming_archive {
             constexpr char SplitIx[] = "split_ix";
             constexpr char SegmentId[] = "segment_id";
             constexpr char ArchiveId[] = "archive_id";
-        }
-        namespace GLTFile {
             constexpr char SegmentLogtypesPosition[] = "segment_logtypes_position";
             constexpr char SegmentOffsetPosition[] = "segment_offset_position";
-        }
-        namespace CLPFile {
-            constexpr char SegmentTimestampsPosition[] = "segment_timestamps_position";
-            constexpr char SegmentLogtypesPosition[] = "segment_logtypes_position";
-            constexpr char SegmentVariablesPosition[] = "segment_variables_position";
         }
         namespace EmptyDirectory {
             constexpr char Path[] = "path";

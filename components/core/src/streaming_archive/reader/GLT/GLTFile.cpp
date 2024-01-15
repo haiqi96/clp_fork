@@ -3,7 +3,7 @@
 //
 
 #include "GLTFile.hpp"
-#include "../../GLTMetadataDB.hpp"
+#include "../../MetadataDB.hpp"
 
 namespace streaming_archive::reader::glt {
     ErrorCode GLTFile::open (const LogTypeDictionaryReader& archive_logtype_dict,
@@ -14,7 +14,7 @@ namespace streaming_archive::reader::glt {
         if(ErrorCode_Success != error_code) {
             return error_code;
         }
-        GLTMetadataDB::GLTFileIterator* glt_file_metadata_ix_ptr = dynamic_cast<GLTMetadataDB::GLTFileIterator*> (&file_metadata_ix);
+        MetadataDB::FileIterator* glt_file_metadata_ix_ptr = dynamic_cast<MetadataDB::FileIterator*> (&file_metadata_ix);
         m_segment_logtypes_decompressed_stream_pos = glt_file_metadata_ix_ptr->get_segment_logtypes_pos();
         m_segment_offsets_decompressed_stream_pos = glt_file_metadata_ix_ptr->get_segment_offset_pos();
 
