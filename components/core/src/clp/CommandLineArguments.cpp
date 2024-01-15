@@ -215,7 +215,7 @@ namespace clp {
                 compression_positional_options_description.add("output-dir", 1);
                 compression_positional_options_description.add("input-paths", -1);
 
-                string storage_engine = "clp";
+                string storage_engine = "glt";
 
                 // Define compression-specific options
                 po::options_description options_compression("Compression Options");
