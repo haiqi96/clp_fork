@@ -2,9 +2,9 @@
 #define STREAMING_ARCHIVE_READER_GLT_LOGTYPETABLEMANAGER_HPP
 
 // Project headers
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../Constants.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
+#include "../Constants.hpp"
 #include "LogtypeTable.hpp"
 #include "LogtypeMetadata.hpp"
 

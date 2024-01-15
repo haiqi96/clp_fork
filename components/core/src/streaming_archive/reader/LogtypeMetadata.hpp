@@ -1,6 +1,6 @@
 #ifndef STREAMING_ARCHIVE_READER_GLT_LOGTYPE_METADATA_HPP
 #define STREAMING_ARCHIVE_READER_GLT_LOGTYPE_METADATA_HPP
-#include "../../../Defs.h"
+#include "../../Defs.h"
 #include <vector>
 namespace streaming_archive::reader::glt {
 

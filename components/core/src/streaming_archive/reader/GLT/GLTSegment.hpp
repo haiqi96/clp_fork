@@ -2,7 +2,7 @@
 #define STREAMING_ARCHIVE_READER_GLT_SEGMENT_HPP
 
 #include "../Segment.hpp"
-#include "MultiLogtypeTablesManager.hpp"
+#include "../MultiLogtypeTablesManager.hpp"
 
 namespace streaming_archive::reader::glt {
     class GLTSegment {

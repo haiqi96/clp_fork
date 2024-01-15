@@ -1,5 +1,5 @@
 #include "MultiLogtypeTablesManager.hpp"
-#include "../../LogtypeSizeTracker.hpp"
+#include "../LogtypeSizeTracker.hpp"
 #include <set>
 
 using streaming_archive::glt::LogtypeSizeTracker;

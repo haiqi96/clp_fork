@@ -267,8 +267,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
-        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/CombinedLogtypeTable.hpp
         src/streaming_archive/reader/GLT/GLTArchive.cpp
         src/streaming_archive/reader/GLT/GLTArchive.hpp
         src/streaming_archive/reader/GLT/GLTFile.cpp
@@ -277,14 +277,14 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/GLT/GLTMessage.hpp
         src/streaming_archive/reader/GLT/GLTSegment.cpp
         src/streaming_archive/reader/GLT/GLTSegment.hpp
-        src/streaming_archive/reader/GLT/LogtypeTable.cpp
-        src/streaming_archive/reader/GLT/LogtypeTable.hpp
-        src/streaming_archive/reader/GLT/LogtypeMetadata.cpp
-        src/streaming_archive/reader/GLT/LogtypeMetadata.hpp
-        src/streaming_archive/reader/GLT/LogtypeTableManager.cpp
-        src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
-        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
-        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/LogtypeTable.cpp
+        src/streaming_archive/reader/LogtypeTable.hpp
+        src/streaming_archive/reader/LogtypeMetadata.cpp
+        src/streaming_archive/reader/LogtypeMetadata.hpp
+        src/streaming_archive/reader/LogtypeTableManager.cpp
+        src/streaming_archive/reader/LogtypeTableManager.hpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/Message.cpp
@@ -778,8 +778,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
-        src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
-        src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/CombinedLogtypeTable.hpp
         src/streaming_archive/reader/GLT/GLTArchive.cpp
         src/streaming_archive/reader/GLT/GLTArchive.hpp
         src/streaming_archive/reader/GLT/GLTFile.cpp
@@ -788,14 +788,14 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/GLT/GLTMessage.hpp
         src/streaming_archive/reader/GLT/GLTSegment.cpp
         src/streaming_archive/reader/GLT/GLTSegment.hpp
-        src/streaming_archive/reader/GLT/LogtypeMetadata.cpp
-        src/streaming_archive/reader/GLT/LogtypeMetadata.hpp
-        src/streaming_archive/reader/GLT/LogtypeTable.cpp
-        src/streaming_archive/reader/GLT/LogtypeTable.hpp
-        src/streaming_archive/reader/GLT/LogtypeTableManager.cpp
-        src/streaming_archive/reader/GLT/LogtypeTableManager.hpp
-        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.cpp
-        src/streaming_archive/reader/GLT/MultiLogtypeTablesManager.hpp
+        src/streaming_archive/reader/LogtypeMetadata.cpp
+        src/streaming_archive/reader/LogtypeMetadata.hpp
+        src/streaming_archive/reader/LogtypeTable.cpp
+        src/streaming_archive/reader/LogtypeTable.hpp
+        src/streaming_archive/reader/LogtypeTableManager.cpp
+        src/streaming_archive/reader/LogtypeTableManager.hpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp

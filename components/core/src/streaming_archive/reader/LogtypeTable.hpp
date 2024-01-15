@@ -8,11 +8,11 @@
 #include <spdlog/spdlog.h>
 
 // Project headers
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../../streaming_compression/passthrough/Decompressor.hpp"
-#include "../../../streaming_compression/zstd/Decompressor.hpp"
-#include "GLTMessage.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
+#include "../../streaming_compression/passthrough/Decompressor.hpp"
+#include "../../streaming_compression/zstd/Decompressor.hpp"
+#include "GLT/GLTMessage.hpp"
 #include "LogtypeMetadata.hpp"
 
 namespace streaming_archive::reader::glt {
