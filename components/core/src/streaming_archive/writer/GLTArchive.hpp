@@ -2,8 +2,8 @@
 #define STREAMING_ARCHIVE_GLT_ARCHIVE_HPP
 
 // Project headers
-#include "../Archive.hpp"
-#include "../Segment.hpp"
+#include "Archive.hpp"
+#include "Segment.hpp"
 #include "GLTFile.hpp"
 #include "GLTSegment.hpp"
 

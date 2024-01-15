@@ -16,7 +16,7 @@
 // Project headers
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../streaming_archive/writer/GLT/GLTArchive.hpp"
+#include "../streaming_archive/writer/GLTArchive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"

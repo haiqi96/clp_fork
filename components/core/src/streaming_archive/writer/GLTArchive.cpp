@@ -6,10 +6,10 @@
 #include <vector>
 
 // Project headers
-#include "../../../compressor_frontend/Constants.hpp"
-#include "../../../EncodedVariableInterpreter.hpp"
-#include "../../../clp/utils.hpp"
-#include "../../GLTMetadataDB.hpp"
+#include "../../compressor_frontend/Constants.hpp"
+#include "../../EncodedVariableInterpreter.hpp"
+#include "../../clp/utils.hpp"
+#include "../GLTMetadataDB.hpp"
 
 namespace streaming_archive::writer {
     GLTArchive::GLTArchive () {

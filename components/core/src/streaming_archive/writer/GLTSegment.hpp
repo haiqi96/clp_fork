@@ -5,9 +5,9 @@
 #include <map>
 
 // Project headers
-#include "../../../streaming_compression/passthrough/Compressor.hpp"
-#include "../../../streaming_compression/zstd/Compressor.hpp"
-#include "../../../Utils.hpp"
+#include "../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../streaming_compression/zstd/Compressor.hpp"
+#include "../../Utils.hpp"
 #include "LogtypeTable.hpp"
 
 namespace streaming_archive::writer {

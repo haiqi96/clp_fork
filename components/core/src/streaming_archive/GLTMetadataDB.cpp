@@ -1,7 +1,7 @@
 #include "GLTMetadataDB.hpp"
 
 // Project headers
-#include "writer/GLT/GLTFile.hpp"
+#include "writer/GLTFile.hpp"
 
 using std::back_insert_iterator;
 using std::make_pair;

@@ -18,7 +18,7 @@
 #include "../streaming_archive/reader/GLT/GLTArchive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
-#include "GLTFileDecompressor.hpp"
+#include "FileDecompressor.hpp"
 
 using std::cerr;
 using std::make_unique;
@@ -65,7 +65,7 @@ namespace clp {
 
             boost::filesystem::path empty_directory_path;
 
-            GLTFileDecompressor file_decompressor;
+            FileDecompressor file_decompressor;
 
             string archive_id;
             string orig_path;

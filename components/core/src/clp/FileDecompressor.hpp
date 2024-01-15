@@ -16,7 +16,7 @@ namespace clp {
      * Class to hold the data structures that are used to decompress files rather than recreating them within the decompression function or passing them as
      * parameters.
      */
-    class GLTFileDecompressor {
+    class FileDecompressor {
     public:
         // Methods
         bool decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,

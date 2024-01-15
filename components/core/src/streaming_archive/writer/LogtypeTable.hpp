@@ -5,9 +5,9 @@
 #include <vector>
 
 // Project headers
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../../PageAllocatedVector.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
+#include "../../PageAllocatedVector.hpp"
 
 namespace streaming_archive::writer {
     /**

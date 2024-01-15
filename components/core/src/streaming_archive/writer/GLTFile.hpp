@@ -2,7 +2,7 @@
 #define STREAMING_ARCHIVE_WRITER_GLT_FILE_HPP
 
 // C++ libraries
-#include "../File.hpp"
+#include "File.hpp"
 
 namespace streaming_archive::writer {
     class GLTFile : public File {
