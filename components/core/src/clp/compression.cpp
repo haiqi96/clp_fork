@@ -16,7 +16,6 @@
 // Project headers
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../streaming_archive/writer/CLP/CLPArchive.hpp"
 #include "../streaming_archive/writer/GLT/GLTArchive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
@@ -102,11 +101,7 @@ namespace clp {
 
         // Open Archive
         unique_ptr<streaming_archive::writer::Archive> archive_writer_ptr;
-        if (command_line_args.use_glt()) {
-            archive_writer_ptr = std::make_unique<streaming_archive::writer::GLTArchive>();
-        } else {
-            archive_writer_ptr = std::make_unique<streaming_archive::writer::CLPArchive>();
-        }
+        archive_writer_ptr = std::make_unique<streaming_archive::writer::GLTArchive>();
         auto& archive_writer = *archive_writer_ptr;
 
         // Set schema file if specified by user

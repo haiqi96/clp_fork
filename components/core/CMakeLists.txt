@@ -168,8 +168,6 @@ set(SOURCE_FILES_clp
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/GLTFileDecompressor.cpp
@@ -264,8 +262,6 @@ set(SOURCE_FILES_clp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/CLPMetadataDB.cpp
-        src/streaming_archive/CLPMetadataDB.hpp
         src/streaming_archive/GLTMetadataDB.cpp
         src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/LogtypeSizeTracker.hpp
@@ -273,10 +269,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/CLP/CLPArchive.cpp
-        src/streaming_archive/reader/CLP/CLPArchive.hpp
-        src/streaming_archive/reader/CLP/CLPFile.cpp
-        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
         src/streaming_archive/reader/GLT/CombinedLogtypeTable.hpp
         src/streaming_archive/reader/GLT/GLTArchive.cpp
@@ -305,10 +297,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/CLP/CLPArchive.cpp
-        src/streaming_archive/writer/CLP/CLPArchive.hpp
-        src/streaming_archive/writer/CLP/CLPFile.cpp
-        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLT/GLTArchive.cpp
@@ -455,18 +443,12 @@ set(SOURCE_FILES_clg
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/CLPMetadataDB.cpp
-        src/streaming_archive/CLPMetadataDB.hpp
         src/streaming_archive/GLTMetadataDB.cpp
         src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/CLP/CLPArchive.cpp
-        src/streaming_archive/reader/CLP/CLPArchive.hpp
-        src/streaming_archive/reader/CLP/CLPFile.cpp
-        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/Message.cpp
@@ -475,8 +457,6 @@ set(SOURCE_FILES_clg
         src/streaming_archive/reader/Segment.hpp
         src/streaming_archive/reader/SegmentManager.cpp
         src/streaming_archive/reader/SegmentManager.hpp
-        src/streaming_archive/writer/CLP/CLPFile.cpp
-        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
@@ -606,18 +586,12 @@ set(SOURCE_FILES_clo
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/CLPMetadataDB.cpp
-        src/streaming_archive/CLPMetadataDB.hpp
         src/streaming_archive/GLTMetadataDB.cpp
         src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/CLP/CLPArchive.cpp
-        src/streaming_archive/reader/CLP/CLPArchive.hpp
-        src/streaming_archive/reader/CLP/CLPFile.cpp
-        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/Message.cpp
@@ -626,8 +600,6 @@ set(SOURCE_FILES_clo
         src/streaming_archive/reader/Segment.hpp
         src/streaming_archive/reader/SegmentManager.cpp
         src/streaming_archive/reader/SegmentManager.hpp
-        src/streaming_archive/writer/CLP/CLPFile.cpp
-        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
@@ -697,8 +669,6 @@ set(SOURCE_FILES_unitTest
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/GLTFileDecompressor.cpp
@@ -816,18 +786,12 @@ set(SOURCE_FILES_unitTest
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
-        src/streaming_archive/CLPMetadataDB.cpp
-        src/streaming_archive/CLPMetadataDB.hpp
         src/streaming_archive/GLTMetadataDB.cpp
         src/streaming_archive/GLTMetadataDB.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/CLP/CLPArchive.cpp
-        src/streaming_archive/reader/CLP/CLPArchive.hpp
-        src/streaming_archive/reader/CLP/CLPFile.cpp
-        src/streaming_archive/reader/CLP/CLPFile.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/GLT/CombinedLogtypeTable.cpp
@@ -856,10 +820,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/CLP/CLPArchive.cpp
-        src/streaming_archive/writer/CLP/CLPArchive.hpp
-        src/streaming_archive/writer/CLP/CLPFile.cpp
-        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/GLT/GLTArchive.cpp
