@@ -1,14 +1,10 @@
-//
-// Created by haiqi on 2023/1/21.
-//
-
 #ifndef STREAMING_ARCHIVE_READER_GLT_FILE_HPP
 #define STREAMING_ARCHIVE_READER_GLT_FILE_HPP
 
 #include "../File.hpp"
 #include "../GLTSegment.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     class GLTFile : public File {
     public:
         GLTFile () : File(),

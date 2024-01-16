@@ -5,7 +5,7 @@
 #include "../../MetadataDB.hpp"
 
 // Intended only for decompression.
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     class GLTArchive : public Archive {
     public:
 
@@ -48,4 +48,4 @@ namespace streaming_archive::reader::glt {
     };
 }
 
-#endif //STREAMING_ARCHIVE_READER_GLT_ARCHIVE_HPP
+#endif //STREAMING_ARCHIVE_READER_ARCHIVE_HPP

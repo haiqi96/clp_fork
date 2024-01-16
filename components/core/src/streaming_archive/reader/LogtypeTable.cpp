@@ -3,7 +3,7 @@
 // Boost libraries
 #include <boost/filesystem.hpp>
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
 
     void LogtypeTable::open_and_load_all (const char* buffer,
                                           const LogtypeMetadata& metadata) {

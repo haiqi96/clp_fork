@@ -1,6 +1,6 @@
 #include "CombinedLogtypeTable.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
 
     CombinedLogtypeTable::CombinedLogtypeTable () {
         // try to reuse a buffer to avoid malloc & free

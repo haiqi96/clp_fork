@@ -61,7 +61,7 @@ namespace clp {
                     break;
             }
 
-            streaming_archive::reader::glt::GLTArchive archive_reader;
+            streaming_archive::reader::GLTArchive archive_reader;
 
             boost::filesystem::path empty_directory_path;
 

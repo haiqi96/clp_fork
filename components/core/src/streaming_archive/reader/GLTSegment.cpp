@@ -5,7 +5,7 @@
 #include "GLTSegment.hpp"
 #include "Message.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     ErrorCode GLTSegment::try_open (const std::string& segment_dir_path, segment_id_t segment_id) {
 
         std::string segment_path = segment_dir_path + std::to_string(segment_id);

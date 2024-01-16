@@ -1,8 +1,8 @@
-#ifndef STREAMING_ARCHIVE_READER_GLT_LOGTYPE_METADATA_HPP
-#define STREAMING_ARCHIVE_READER_GLT_LOGTYPE_METADATA_HPP
+#ifndef STREAMING_ARCHIVE_READER_LOGTYPE_METADATA_HPP
+#define STREAMING_ARCHIVE_READER_LOGTYPE_METADATA_HPP
 #include "../../Defs.h"
 #include <vector>
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
 
     // logtype belonging to single logtype table
     class LogtypeMetadata {
@@ -34,4 +34,4 @@ namespace streaming_archive::reader::glt {
     };
 }
 
-#endif //STREAMING_ARCHIVE_READER_GLT_LOGTYPE_METADATA_HPP
+#endif //STREAMING_ARCHIVE_READER_LOGTYPE_METADATA_HPP

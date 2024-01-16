@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_GLT_COMBINEDLOGTYPETABLES_HPP
-#define STREAMING_ARCHIVE_READER_GLT_COMBINEDLOGTYPETABLES_HPP
+#ifndef STREAMING_ARCHIVE_READER_COMBINEDLOGTYPETABLES_HPP
+#define STREAMING_ARCHIVE_READER_COMBINEDLOGTYPETABLES_HPP
 
 // C++ libraries
 #include <vector>
@@ -15,7 +15,7 @@
 #include "Message.hpp"
 #include "LogtypeMetadata.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     class CombinedLogtypeTable {
     public:
 
@@ -84,4 +84,4 @@ namespace streaming_archive::reader::glt {
     };
 }
 
-#endif //STREAMING_ARCHIVE_READER_GLT_COMBINEDLOGTYPETABLES_HPP
+#endif //STREAMING_ARCHIVE_READER_COMBINEDLOGTYPETABLES_HPP

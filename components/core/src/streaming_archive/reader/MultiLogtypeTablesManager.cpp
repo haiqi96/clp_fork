@@ -4,7 +4,7 @@
 
 using streaming_archive::glt::LogtypeSizeTracker;
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
 
     void MultiLogtypeTablesManager::open (const std::string& segment_path) {
         LogtypeTableManager::open(segment_path);

@@ -3,7 +3,7 @@
 // Boost libraries
 #include <boost/filesystem.hpp>
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     void LogtypeTableManager::open (const std::string& segment_path) {
         if(m_is_open) {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);

@@ -20,12 +20,12 @@ namespace clp {
     public:
         // Methods
         bool decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
-                              streaming_archive::reader::glt::GLTArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
+                              streaming_archive::reader::GLTArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
 
     private:
         // Variables
         FileWriter m_decompressed_file_writer;
-        streaming_archive::reader::glt::GLTFile m_encoded_file;
+        streaming_archive::reader::GLTFile m_encoded_file;
         streaming_archive::reader::Message m_encoded_message;
         std::string m_decompressed_message;
     };

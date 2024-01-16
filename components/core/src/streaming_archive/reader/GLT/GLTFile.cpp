@@ -5,7 +5,7 @@
 #include "GLTFile.hpp"
 #include "../../MetadataDB.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     ErrorCode GLTFile::open (const LogTypeDictionaryReader& archive_logtype_dict,
                              MetadataDB::FileIterator& file_metadata_ix,
                              GLTSegment& segment,

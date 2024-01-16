@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_GLT_LOGTYPETABLE_HPP
-#define STREAMING_ARCHIVE_READER_GLT_LOGTYPETABLE_HPP
+#ifndef STREAMING_ARCHIVE_READER_LOGTYPETABLE_HPP
+#define STREAMING_ARCHIVE_READER_LOGTYPETABLE_HPP
 
 // C++ libraries
 #include <vector>
@@ -15,7 +15,7 @@
 #include "Message.hpp"
 #include "LogtypeMetadata.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
 
     /* this class is supposed to handle reading from a variable segment
      */
@@ -141,4 +141,4 @@ namespace streaming_archive::reader::glt {
     };
 }
 
-#endif //STREAMING_ARCHIVE_READER_GLT_LOGTYPETABLE_HPP
+#endif //STREAMING_ARCHIVE_READER_LOGTYPETABLE_HPP

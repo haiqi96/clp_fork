@@ -4,7 +4,7 @@
 #include "Segment.hpp"
 #include "MultiLogtypeTablesManager.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     class GLTSegment {
     public:
         ErrorCode try_open (const std::string& segment_dir_path, segment_id_t segment_id);

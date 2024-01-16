@@ -1,10 +1,10 @@
-#ifndef STREAMING_ARCHIVE_READER_GLT_MULITLOGTYPETABLE_MANAGER_HPP
-#define STREAMING_ARCHIVE_READER_GLT_MULITLOGTYPETABLE_MANAGER_HPP
+#ifndef STREAMING_ARCHIVE_READER_MULITLOGTYPETABLE_MANAGER_HPP
+#define STREAMING_ARCHIVE_READER_MULITLOGTYPETABLE_MANAGER_HPP
 
 #include "LogtypeTableManager.hpp"
 #include "CombinedLogtypeTable.hpp"
 
-namespace streaming_archive::reader::glt {
+namespace streaming_archive::reader {
     class MultiLogtypeTablesManager : public LogtypeTableManager {
     public:
         /**
@@ -27,4 +27,4 @@ namespace streaming_archive::reader::glt {
 }
 
 
-#endif //STREAMING_ARCHIVE_READER_GLT_MULITLOGTYPETABLE_MANAGER_HPP
+#endif //STREAMING_ARCHIVE_READER_MULITLOGTYPETABLE_MANAGER_HPP
