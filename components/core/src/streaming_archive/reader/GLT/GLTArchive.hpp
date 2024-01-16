@@ -38,7 +38,7 @@ namespace streaming_archive::reader::glt {
         /**
          * Wrapper for streaming_archive::reader::File::get_next_message
          */
-        bool get_next_message (GLTFile& file, GLTMessage& msg);
+        bool get_next_message (GLTFile& file, Message& msg);
 
     private:
 

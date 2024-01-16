@@ -138,7 +138,7 @@ namespace streaming_archive::reader::glt {
         m_is_open = false;
     }
 
-    bool CombinedLogtypeTable::get_next_full_row (GLTMessage& msg) {
+    bool CombinedLogtypeTable::get_next_full_row (Message& msg) {
         assert(m_is_open);
         assert(m_is_logtype_open);
         if (m_current_row == m_num_row) {
@@ -156,7 +156,7 @@ namespace streaming_archive::reader::glt {
         return true;
     }
 
-    bool CombinedLogtypeTable::get_next_message_partial (GLTMessage& msg, size_t l, size_t r) {
+    bool CombinedLogtypeTable::get_next_message_partial (Message& msg, size_t l, size_t r) {
         if (m_current_row == m_num_row) {
             return false;
         }
@@ -172,7 +172,7 @@ namespace streaming_archive::reader::glt {
         m_current_row++;
     }
 
-    void CombinedLogtypeTable::get_remaining_message (GLTMessage& msg, size_t l, size_t r) {
+    void CombinedLogtypeTable::get_remaining_message (Message& msg, size_t l, size_t r) {
         for (size_t ix = 0; ix < l; ix++) {
             msg.get_writable_vars()[ix] = m_column_based_variables[ix * m_num_row + m_current_row];
         }
@@ -190,7 +190,7 @@ namespace streaming_archive::reader::glt {
         return m_timestamps[offset];
     }
 
-    void CombinedLogtypeTable::get_row_at_offset (size_t offset, GLTMessage& msg) {
+    void CombinedLogtypeTable::get_row_at_offset (size_t offset, Message& msg) {
         if (!m_is_open) {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }

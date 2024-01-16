@@ -15,7 +15,7 @@ namespace streaming_archive::reader::glt {
         virtual void open(const std::string& segment_path) override;
         bool check_variable_column(logtype_dictionary_id_t logtype_id);
         void load_variable_columns(logtype_dictionary_id_t logtype_id);
-        void get_variable_row_at_offset(logtype_dictionary_id_t logtype_id, size_t offset, GLTMessage& msg);
+        void get_variable_row_at_offset(logtype_dictionary_id_t logtype_id, size_t offset, Message& msg);
         epochtime_t get_timestamp_at_offset(logtype_dictionary_id_t logtype_id, size_t offset);
         void load_all_tables(combined_table_id_t combined_table_id);
         virtual void close() override;

@@ -69,7 +69,7 @@ namespace streaming_archive::reader::glt {
         return return_value;
     }
 
-    bool GLTFile::get_next_message (GLTMessage& msg) {
+    bool GLTFile::get_next_message (Message& msg) {
         if (m_msgs_ix >= m_num_messages) {
             return false;
         }

@@ -273,10 +273,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/GLT/GLTArchive.hpp
         src/streaming_archive/reader/GLT/GLTFile.cpp
         src/streaming_archive/reader/GLT/GLTFile.hpp
-        src/streaming_archive/reader/GLT/GLTMessage.cpp
-        src/streaming_archive/reader/GLT/GLTMessage.hpp
-        src/streaming_archive/reader/GLT/GLTSegment.cpp
-        src/streaming_archive/reader/GLT/GLTSegment.hpp
+        src/streaming_archive/reader/GLTSegment.cpp
+        src/streaming_archive/reader/GLTSegment.hpp
         src/streaming_archive/reader/LogtypeTable.cpp
         src/streaming_archive/reader/LogtypeTable.hpp
         src/streaming_archive/reader/LogtypeMetadata.cpp
@@ -784,10 +782,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/GLT/GLTArchive.hpp
         src/streaming_archive/reader/GLT/GLTFile.cpp
         src/streaming_archive/reader/GLT/GLTFile.hpp
-        src/streaming_archive/reader/GLT/GLTMessage.cpp
-        src/streaming_archive/reader/GLT/GLTMessage.hpp
-        src/streaming_archive/reader/GLT/GLTSegment.cpp
-        src/streaming_archive/reader/GLT/GLTSegment.hpp
+        src/streaming_archive/reader/GLTSegment.cpp
+        src/streaming_archive/reader/GLTSegment.hpp
         src/streaming_archive/reader/LogtypeMetadata.cpp
         src/streaming_archive/reader/LogtypeMetadata.hpp
         src/streaming_archive/reader/LogtypeTable.cpp

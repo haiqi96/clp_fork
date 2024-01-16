@@ -96,7 +96,7 @@ namespace streaming_archive::reader::glt {
         m_read_buffer_ptr = nullptr;
     }
 
-    bool LogtypeTable::get_next_full_row (GLTMessage& msg) {
+    bool LogtypeTable::get_next_full_row (Message& msg) {
         if(!m_is_open) {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
@@ -262,7 +262,7 @@ namespace streaming_archive::reader::glt {
         return m_timestamps[offset];
     }
 
-    void LogtypeTable::get_row_at_offset (size_t offset, GLTMessage& msg) {
+    void LogtypeTable::get_row_at_offset (size_t offset, Message& msg) {
         if(!m_is_open) {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }

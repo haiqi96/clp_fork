@@ -24,6 +24,13 @@ namespace streaming_archive::reader {
 
         void clear_vars ();
 
+        // GLT methods
+        file_id_t get_file_id () const;
+        void set_file_id (file_id_t file_id);
+        void resize_var (size_t var_size);
+        std::vector<encoded_variable_t>& get_writable_vars ();
+        void load_vars_from(const std::vector<encoded_variable_t>& vars, size_t count, size_t offset);
+
     protected:
         friend class Archive;
 
@@ -32,6 +39,9 @@ namespace streaming_archive::reader {
         logtype_dictionary_id_t m_logtype_id;
         std::vector<encoded_variable_t> m_vars;
         epochtime_t m_timestamp;
+
+        // GLT specific
+        file_id_t m_file_id;
     };
 }
 

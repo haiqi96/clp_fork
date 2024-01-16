@@ -9,7 +9,7 @@
 #include "../streaming_archive/MetadataDB.hpp"
 #include "../streaming_archive/reader/GLT/GLTArchive.hpp"
 #include "../streaming_archive/reader/GLT/GLTFile.hpp"
-#include "../streaming_archive/reader/GLT/GLTMessage.hpp"
+#include "../streaming_archive/reader/Message.hpp"
 
 namespace clp {
     /**
@@ -26,7 +26,7 @@ namespace clp {
         // Variables
         FileWriter m_decompressed_file_writer;
         streaming_archive::reader::glt::GLTFile m_encoded_file;
-        streaming_archive::reader::glt::GLTMessage m_encoded_message;
+        streaming_archive::reader::Message m_encoded_message;
         std::string m_decompressed_message;
     };
 };

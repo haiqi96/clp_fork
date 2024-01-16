@@ -12,7 +12,7 @@
 #include "../../ErrorCode.hpp"
 #include "../../streaming_compression/passthrough/Decompressor.hpp"
 #include "../../streaming_compression/zstd/Decompressor.hpp"
-#include "GLT/GLTMessage.hpp"
+#include "Message.hpp"
 #include "LogtypeMetadata.hpp"
 
 namespace streaming_archive::reader::glt {
@@ -50,7 +50,7 @@ namespace streaming_archive::reader::glt {
          * @param msg
          * @return
          */
-        bool get_next_full_row (GLTMessage& msg);
+        bool get_next_full_row (Message& msg);
 
         /**
          *
@@ -75,7 +75,7 @@ namespace streaming_archive::reader::glt {
          * @param msg
          * @return
          */
-        void get_row_at_offset (size_t offset, GLTMessage& msg);
+        void get_row_at_offset (size_t offset, Message& msg);
 
         epochtime_t get_timestamp_at_offset (size_t offset);
 

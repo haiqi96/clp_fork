@@ -6,7 +6,7 @@
 #define STREAMING_ARCHIVE_READER_GLT_FILE_HPP
 
 #include "../File.hpp"
-#include "GLTSegment.hpp"
+#include "../GLTSegment.hpp"
 
 namespace streaming_archive::reader::glt {
     class GLTFile : public File {
@@ -33,7 +33,7 @@ namespace streaming_archive::reader::glt {
          * @param msg
          * @return true if message read, false if no more messages left
          */
-        bool get_next_message (GLTMessage& msg);
+        bool get_next_message (Message& msg);
 
         /**
          * Get logtype table offset of the logtype_id

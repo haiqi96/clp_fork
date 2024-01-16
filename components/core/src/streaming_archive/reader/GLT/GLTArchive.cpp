@@ -46,7 +46,7 @@ namespace streaming_archive::reader::glt {
     }
 
 
-    bool GLTArchive::get_next_message (GLTFile& file, GLTMessage& msg) {
+    bool GLTArchive::get_next_message (GLTFile& file, Message& msg) {
         return file.get_next_message(msg);
     }
 }

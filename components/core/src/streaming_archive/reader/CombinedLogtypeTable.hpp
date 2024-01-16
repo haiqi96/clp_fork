@@ -12,7 +12,7 @@
 #include "../../ErrorCode.hpp"
 #include "../../streaming_compression/passthrough/Decompressor.hpp"
 #include "../../streaming_compression/zstd/Decompressor.hpp"
-#include "GLT/GLTMessage.hpp"
+#include "Message.hpp"
 #include "LogtypeMetadata.hpp"
 
 namespace streaming_archive::reader::glt {
@@ -50,12 +50,12 @@ namespace streaming_archive::reader::glt {
         void close_logtype_table ();
 
         epochtime_t get_timestamp_at_offset (size_t offset);
-        void get_row_at_offset (size_t offset, GLTMessage& msg);
-        bool get_next_full_row (GLTMessage& msg);
+        void get_row_at_offset (size_t offset, Message& msg);
+        bool get_next_full_row (Message& msg);
 
-        bool get_next_message_partial (GLTMessage& msg, size_t l, size_t r);
+        bool get_next_message_partial (Message& msg, size_t l, size_t r);
         void skip_next_row ();
-        void get_remaining_message (GLTMessage& msg, size_t l, size_t r);
+        void get_remaining_message (Message& msg, size_t l, size_t r);
 
         bool is_open() const { return m_is_open; }
         bool is_logtype_table_open() const { return m_is_logtype_open; }

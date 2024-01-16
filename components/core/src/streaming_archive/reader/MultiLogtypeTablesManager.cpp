@@ -100,7 +100,7 @@ namespace streaming_archive::reader::glt {
     }
 
     void MultiLogtypeTablesManager::get_variable_row_at_offset (logtype_dictionary_id_t logtype_id,
-                                                                size_t offset, GLTMessage& msg) {
+                                                                size_t offset, Message& msg) {
         if (m_logtype_tables.find(logtype_id) != m_logtype_tables.end()) {
             m_logtype_tables[logtype_id].get_row_at_offset(offset, msg);
         } else if (m_combined_tables.find(logtype_id) != m_combined_tables.end()) {
