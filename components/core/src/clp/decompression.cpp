@@ -15,7 +15,7 @@
 #include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../streaming_archive/reader/GLT/GLTArchive.hpp"
+#include "../streaming_archive/reader/Archive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
@@ -61,7 +61,7 @@ namespace clp {
                     break;
             }
 
-            streaming_archive::reader::GLTArchive archive_reader;
+            streaming_archive::reader::Archive archive_reader;
 
             boost::filesystem::path empty_directory_path;
 

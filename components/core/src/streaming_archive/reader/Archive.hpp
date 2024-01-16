@@ -55,9 +55,6 @@ namespace streaming_archive::reader {
         void open (const std::string& path);
         void close ();
 
-        virtual void open_derived (const std::string& path) = 0;
-        virtual void close_derived () = 0;
-
         /**
          * Reads any new entries added to the dictionaries
          * @throw Same as LogTypeDictionary::read_from_file and VariableDictionary::read_from_file
@@ -79,21 +76,48 @@ namespace streaming_archive::reader {
         void decompress_empty_directories (const std::string& output_dir);
 
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator () {
-            return m_metadata_db->get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
+            return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (const std::string& file_path) {
-            return m_metadata_db->get_file_iterator(cEpochTimeMin, cEpochTimeMax, file_path, false, cInvalidSegmentId);
+            return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, file_path, false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path) {
-            return m_metadata_db->get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
+            return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path,
                                                                      segment_id_t segment_id)
         {
-            return m_metadata_db->get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
+            return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
         }
 
-    protected:
+
+        // GLT functions
+        /**
+         * Opens file with given path
+         * @param file
+         * @param file_metadata_ix
+         * @param read_ahead Whether to read-ahead in the file (if possible)
+         * @return Same as streaming_archive::reader::File::open_me
+         * @throw Same as streaming_archive::reader::File::open_me
+         */
+        ErrorCode open_file (File& file, MetadataDB::FileIterator& file_metadata_ix);
+        /**
+         * Wrapper for streaming_archive::reader::File::close_me
+         * @param file
+         */
+        void close_file (File& file);
+        /**
+         * Wrapper for streaming_archive::reader::File::reset_indices
+         * @param file
+         */
+        void reset_file_indices (File& file);
+
+        /**
+         * Wrapper for streaming_archive::reader::File::get_next_message
+         */
+        bool get_next_message (File& file, Message& msg);
+
+    private:
         // Variables
         std::string m_id;
         std::string m_path;
@@ -101,7 +125,12 @@ namespace streaming_archive::reader {
         LogTypeDictionaryReader m_logtype_dictionary;
         VariableDictionaryReader m_var_dictionary;
 
-        std::unique_ptr<MetadataDB> m_metadata_db;
+        MetadataDB m_metadata_db;
+
+        //GLT Specific
+        segment_id_t m_current_segment_id;
+        GLTSegment m_segment;
+        Segment m_message_order_table;
     };
 }
 

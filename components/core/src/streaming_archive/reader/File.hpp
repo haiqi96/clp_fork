@@ -141,7 +141,6 @@ namespace streaming_archive::reader {
         bool m_is_split;
 
         // GLT specific
-        friend class GLTArchive;
         uint64_t m_segment_logtypes_decompressed_stream_pos;
         uint64_t m_segment_offsets_decompressed_stream_pos;
         std::unique_ptr<logtype_dictionary_id_t[]> m_segment_logtypes;

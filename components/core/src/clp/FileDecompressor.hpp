@@ -7,7 +7,7 @@
 // Project headers
 #include "../FileWriter.hpp"
 #include "../streaming_archive/MetadataDB.hpp"
-#include "../streaming_archive/reader/GLT/GLTArchive.hpp"
+#include "../streaming_archive/reader/Archive.hpp"
 #include "../streaming_archive/reader/File.hpp"
 #include "../streaming_archive/reader/Message.hpp"
 
@@ -20,7 +20,7 @@ namespace clp {
     public:
         // Methods
         bool decompress_file (streaming_archive::MetadataDB::FileIterator& file_metadata_ix, const std::string& output_dir,
-                              streaming_archive::reader::GLTArchive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
+                              streaming_archive::reader::Archive& archive_reader, std::unordered_map<std::string, std::string>& temp_path_to_final_path);
 
     private:
         // Variables
