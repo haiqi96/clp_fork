@@ -271,8 +271,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/CombinedLogtypeTable.hpp
         src/streaming_archive/reader/GLT/GLTArchive.cpp
         src/streaming_archive/reader/GLT/GLTArchive.hpp
-        src/streaming_archive/reader/GLT/GLTFile.cpp
-        src/streaming_archive/reader/GLT/GLTFile.hpp
         src/streaming_archive/reader/GLTSegment.cpp
         src/streaming_archive/reader/GLTSegment.hpp
         src/streaming_archive/reader/LogtypeTable.cpp
@@ -780,8 +778,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/CombinedLogtypeTable.hpp
         src/streaming_archive/reader/GLT/GLTArchive.cpp
         src/streaming_archive/reader/GLT/GLTArchive.hpp
-        src/streaming_archive/reader/GLT/GLTFile.cpp
-        src/streaming_archive/reader/GLT/GLTFile.hpp
         src/streaming_archive/reader/GLTSegment.cpp
         src/streaming_archive/reader/GLTSegment.hpp
         src/streaming_archive/reader/LogtypeMetadata.cpp

@@ -1,7 +1,7 @@
 #ifndef STREAMING_ARCHIVE_READER_GLT_ARCHIVE_HPP
 #define STREAMING_ARCHIVE_READER_GLT_ARCHIVE_HPP
 #include "../Archive.hpp"
-#include "GLTFile.hpp"
+#include "../File.hpp"
 #include "../../MetadataDB.hpp"
 
 // Intended only for decompression.
@@ -22,23 +22,23 @@ namespace streaming_archive::reader {
          * @return Same as streaming_archive::reader::File::open_me
          * @throw Same as streaming_archive::reader::File::open_me
          */
-        ErrorCode open_file (GLTFile& file, MetadataDB::FileIterator& file_metadata_ix);
+        ErrorCode open_file (File& file, MetadataDB::FileIterator& file_metadata_ix);
 
         /**
          * Wrapper for streaming_archive::reader::File::close_me
          * @param file
          */
-        void close_file (GLTFile& file);
+        void close_file (File& file);
         /**
          * Wrapper for streaming_archive::reader::File::reset_indices
          * @param file
          */
-        void reset_file_indices (GLTFile& file);
+        void reset_file_indices (File& file);
 
         /**
          * Wrapper for streaming_archive::reader::File::get_next_message
          */
-        bool get_next_message (GLTFile& file, Message& msg);
+        bool get_next_message (File& file, Message& msg);
 
     private:
 

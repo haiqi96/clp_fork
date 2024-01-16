@@ -14,7 +14,7 @@ namespace streaming_archive::reader {
         m_current_segment_id = INT64_MAX;
     }
 
-    ErrorCode GLTArchive::open_file (GLTFile& file, MetadataDB::FileIterator& file_metadata_ix) {
+    ErrorCode GLTArchive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix) {
         const auto segment_id = file_metadata_ix.get_segment_id();
         if (segment_id != m_current_segment_id) {
             if (m_current_segment_id != INT64_MAX) {
@@ -37,16 +37,16 @@ namespace streaming_archive::reader {
         return file.open(m_logtype_dictionary, file_metadata_ix, m_segment, m_message_order_table);
     }
 
-    void GLTArchive::close_file (GLTFile& file) {
+    void GLTArchive::close_file (File& file) {
         file.close();
     }
 
-    void GLTArchive::reset_file_indices (GLTFile& file) {
+    void GLTArchive::reset_file_indices (File& file) {
         file.reset_indices();
     }
 
 
-    bool GLTArchive::get_next_message (GLTFile& file, Message& msg) {
+    bool GLTArchive::get_next_message (File& file, Message& msg) {
         return file.get_next_message(msg);
     }
 }
