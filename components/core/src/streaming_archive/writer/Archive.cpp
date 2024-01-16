@@ -247,93 +247,8 @@ namespace streaming_archive::writer {
         return *m_file;
     }
 
-    void Archive::set_file_is_split (bool is_split) {
-        if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-        m_file->set_is_split(is_split);
-    }
-
-    void Archive::change_ts_pattern (const TimestampPattern* pattern) {
-        if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-        m_file->change_ts_pattern(pattern);
-    }
-
-    void Archive::write_dir_snapshot () {
-        // Flush dictionaries
-        m_logtype_dict.write_header_and_flush_to_disk();
-        m_var_dict.write_header_and_flush_to_disk();
-    }
-
-    void Archive::persist_file_metadata (const vector<File*>& files) {
-        if (files.empty()) {
-            return;
-        }
-
-        m_metadata_db.update_files(files);
-
-        m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
-    }
-
-    void Archive::add_empty_directories (const vector<string>& empty_directory_paths) {
-        if (empty_directory_paths.empty()) {
-            return;
-        }
-
-        m_metadata_db.add_empty_directories(empty_directory_paths);
-    }
-
-    size_t Archive::get_stable_uncompressed_size () const {
-        size_t uncompressed_size = m_stable_uncompressed_size;
-
-        // Add size of files in an unclosed segment
-        for (auto file : m_files_in_segment) {
-            uncompressed_size += file->get_num_uncompressed_bytes();
-        }
-
-        return uncompressed_size;
-    }
-
-    size_t Archive::get_stable_size () const {
-        size_t on_disk_size = m_stable_size + m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size() + m_filename_dict_writer.get_pos();
-        return on_disk_size;
-    }
-
-    void Archive::update_metadata () {
-        auto stable_uncompressed_size = get_stable_uncompressed_size();
-        auto stable_size = get_stable_size();
-
-        m_metadata_file_writer.seek_from_current(-((int64_t)(sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size))));
-        m_metadata_file_writer.write_numeric_value(stable_uncompressed_size);
-        m_metadata_file_writer.write_numeric_value(stable_size);
-
-        m_global_metadata_db->update_archive_size(m_id_as_string, stable_uncompressed_size,stable_size);
-
-        if (m_print_archive_stats_progress) {
-            nlohmann::json json_msg;
-            json_msg["id"] = m_id_as_string;
-            json_msg["uncompressed_size"] = stable_uncompressed_size;
-            json_msg["size"] = stable_size;
-            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
-        }
-    }
-
-    void Archive::create_and_open_file (const std::string& path, group_id_t group_id,
-                                           const boost::uuids::uuid& orig_file_id,
-                                           size_t split_ix) {
-        if (m_file != nullptr) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-        }
-        m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
-        m_file->open();
-        std::string file_name_to_write = path + '\n';
-        m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
-    }
-
     void Archive::write_msg (epochtime_t timestamp, const std::string& message,
-                                size_t num_uncompressed_bytes) {
+                             size_t num_uncompressed_bytes) {
         // Encode message and add components to dictionaries
         std::vector<encoded_variable_t> encoded_vars;
         std::vector<variable_dictionary_id_t> var_ids;
@@ -353,9 +268,9 @@ namespace streaming_archive::writer {
     }
 
     void Archive::write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg,
-                                             uint32_t uncompressed_msg_pos,
-                                             const bool has_delimiter,
-                                             const bool has_timestamp) {
+                                          uint32_t uncompressed_msg_pos,
+                                          const bool has_delimiter,
+                                          const bool has_timestamp) {
         epochtime_t timestamp = 0;
         TimestampPattern* timestamp_pattern = nullptr;
         if (has_timestamp) {
@@ -462,6 +377,91 @@ namespace streaming_archive::writer {
             m_logtype_ids_in_segment.insert(logtype_id);
             m_var_ids_in_segment.insert_all(m_var_ids);
         }
+    }
+
+    void Archive::set_file_is_split (bool is_split) {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+        m_file->set_is_split(is_split);
+    }
+
+    void Archive::change_ts_pattern (const TimestampPattern* pattern) {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+        m_file->change_ts_pattern(pattern);
+    }
+
+    void Archive::write_dir_snapshot () {
+        // Flush dictionaries
+        m_logtype_dict.write_header_and_flush_to_disk();
+        m_var_dict.write_header_and_flush_to_disk();
+    }
+
+    void Archive::persist_file_metadata (const vector<File*>& files) {
+        if (files.empty()) {
+            return;
+        }
+
+        m_metadata_db.update_files(files);
+
+        m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
+    }
+
+    void Archive::add_empty_directories (const vector<string>& empty_directory_paths) {
+        if (empty_directory_paths.empty()) {
+            return;
+        }
+
+        m_metadata_db.add_empty_directories(empty_directory_paths);
+    }
+
+    size_t Archive::get_stable_uncompressed_size () const {
+        size_t uncompressed_size = m_stable_uncompressed_size;
+
+        // Add size of files in an unclosed segment
+        for (auto file : m_files_in_segment) {
+            uncompressed_size += file->get_num_uncompressed_bytes();
+        }
+
+        return uncompressed_size;
+    }
+
+    size_t Archive::get_stable_size () const {
+        size_t on_disk_size = m_stable_size + m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size() + m_filename_dict_writer.get_pos();
+        return on_disk_size;
+    }
+
+    void Archive::update_metadata () {
+        auto stable_uncompressed_size = get_stable_uncompressed_size();
+        auto stable_size = get_stable_size();
+
+        m_metadata_file_writer.seek_from_current(-((int64_t)(sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size))));
+        m_metadata_file_writer.write_numeric_value(stable_uncompressed_size);
+        m_metadata_file_writer.write_numeric_value(stable_size);
+
+        m_global_metadata_db->update_archive_size(m_id_as_string, stable_uncompressed_size,stable_size);
+
+        if (m_print_archive_stats_progress) {
+            nlohmann::json json_msg;
+            json_msg["id"] = m_id_as_string;
+            json_msg["uncompressed_size"] = stable_uncompressed_size;
+            json_msg["size"] = stable_size;
+            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
+        }
+    }
+
+    void Archive::create_and_open_file (const std::string& path, group_id_t group_id,
+                                           const boost::uuids::uuid& orig_file_id,
+                                           size_t split_ix) {
+        if (m_file != nullptr) {
+            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        }
+        m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
+        m_file->open();
+        std::string file_name_to_write = path + '\n';
+        m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
     }
 
     void Archive::append_file_to_segment () {
