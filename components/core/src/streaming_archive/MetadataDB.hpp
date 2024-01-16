@@ -10,6 +10,7 @@
 
 // Project headers
 #include "../SQLiteDB.hpp"
+#include "../type_utils.hpp"
 #include "writer/File.hpp"
 
 namespace streaming_archive {
@@ -69,9 +70,11 @@ namespace streaming_archive {
             };
 
             // Constructors
-            explicit FileIterator (SQLiteDB& db, epochtime_t begin_timestamp, epochtime_t end_timestamp, const std::string& file_path, bool in_specific_segment,
+            explicit FileIterator (MetadataDB* m_db_ptr, SQLiteDB& db, epochtime_t begin_timestamp, epochtime_t end_timestamp, const std::string& file_path, bool in_specific_segment,
                                    segment_id_t segment_id);
-
+            // Destructor
+            // Need at least one virtual function to enable dynamic casting
+            virtual ~FileIterator() {}
             // Methods
             void set_segment_id (segment_id_t segment_id);
 
@@ -87,9 +90,9 @@ namespace streaming_archive {
             bool is_split () const;
             size_t get_split_ix () const;
             segment_id_t get_segment_id () const;
-            size_t get_segment_timestamps_pos () const;
+            // GLT specific
             size_t get_segment_logtypes_pos () const;
-            size_t get_segment_variables_pos () const;
+            size_t get_segment_offset_pos () const;
         };
 
         class EmptyDirectoryIterator : public Iterator {
@@ -125,14 +128,39 @@ namespace streaming_archive {
         void update_files (const std::vector<writer::File*>& files);
         void add_empty_directories (const std::vector<std::string>& empty_directory_paths);
 
-        std::unique_ptr<FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, bool in_specific_segment,
-                                                         segment_id_t segment_id)
+        virtual std::unique_ptr<FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, bool in_specific_segment,
+                                                                 segment_id_t segment_id)
         {
-            return std::make_unique<FileIterator>(m_db, begin_ts, end_ts, file_path, in_specific_segment, segment_id);
+            return std::make_unique<FileIterator>(this, m_db, begin_ts, end_ts, file_path, in_specific_segment, segment_id);
         }
         std::unique_ptr<EmptyDirectoryIterator> get_empty_directory_iterator () { return std::make_unique<EmptyDirectoryIterator>(m_db); }
 
     private:
+        // Methods to handle storage specific fields
+        static size_t get_field_size() { return enum_to_underlying_type(FilesTableFieldIndexes::Length); }
+
+        SQLitePreparedStatement get_files_select_statement (SQLiteDB& db, epochtime_t ts_begin, epochtime_t ts_end, const std::string& file_path, bool in_specific_segment, segment_id_t segment_id);
+        void create_tables (const std::vector<std::pair<std::string, std::string>>& file_field_names_and_types, SQLiteDB& db);
+
+        // Types
+        enum class FilesTableFieldIndexes : uint16_t {
+            Id = 0,  // NOTE: This needs to be the first item in the list
+            OrigFileId,
+            Path,
+            BeginTimestamp,
+            EndTimestamp,
+            TimestampPatterns,
+            NumUncompressedBytes,
+            NumMessages,
+            NumVariables,
+            IsSplit,
+            SplitIx,
+            SegmentId,
+            SegmentLogtypesPosition,
+            SegmentOffsetPosition,
+            Length,
+        };
+
         // Variables
         bool m_is_open;
 

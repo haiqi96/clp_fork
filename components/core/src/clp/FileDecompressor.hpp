@@ -1,5 +1,5 @@
-#ifndef CLP_FILEDECOMPRESSOR_HPP
-#define CLP_FILEDECOMPRESSOR_HPP
+#ifndef CLP_GLT_FILEDECOMPRESSOR_HPP
+#define CLP_GLT_FILEDECOMPRESSOR_HPP
 
 // C++ standard libraries
 #include <string>

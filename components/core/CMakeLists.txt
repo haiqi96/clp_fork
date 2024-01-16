@@ -168,10 +168,10 @@ set(SOURCE_FILES_clp
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
+        src/clp/FileDecompressor.cpp
+        src/clp/FileDecompressor.hpp
         src/clp/run.cpp
         src/clp/run.hpp
         src/clp/StructuredFileToCompress.cpp
@@ -262,10 +262,23 @@ set(SOURCE_FILES_clp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/streaming_archive/Constants.hpp
+        src/streaming_archive/LogtypeSizeTracker.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/GLTSegment.cpp
+        src/streaming_archive/reader/GLTSegment.hpp
+        src/streaming_archive/reader/LogtypeTable.cpp
+        src/streaming_archive/reader/LogtypeTable.hpp
+        src/streaming_archive/reader/LogtypeMetadata.cpp
+        src/streaming_archive/reader/LogtypeMetadata.hpp
+        src/streaming_archive/reader/LogtypeTableManager.cpp
+        src/streaming_archive/reader/LogtypeTableManager.hpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
         src/streaming_archive/reader/Message.cpp
@@ -278,6 +291,10 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
+        src/streaming_archive/writer/GLTSegment.cpp
+        src/streaming_archive/writer/GLTSegment.hpp
+        src/streaming_archive/writer/LogtypeTable.cpp
+        src/streaming_archive/writer/LogtypeTable.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Compressor.cpp
@@ -632,10 +649,10 @@ set(SOURCE_FILES_unitTest
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
+        src/clp/FileDecompressor.cpp
+        src/clp/FileDecompressor.hpp
         src/clp/run.cpp
         src/clp/run.hpp
         src/clp/StructuredFileToCompress.cpp
@@ -755,6 +772,18 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/File.cpp
         src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/CombinedLogtypeTable.cpp
+        src/streaming_archive/reader/CombinedLogtypeTable.hpp
+        src/streaming_archive/reader/GLTSegment.cpp
+        src/streaming_archive/reader/GLTSegment.hpp
+        src/streaming_archive/reader/LogtypeMetadata.cpp
+        src/streaming_archive/reader/LogtypeMetadata.hpp
+        src/streaming_archive/reader/LogtypeTable.cpp
+        src/streaming_archive/reader/LogtypeTable.hpp
+        src/streaming_archive/reader/LogtypeTableManager.cpp
+        src/streaming_archive/reader/LogtypeTableManager.hpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        src/streaming_archive/reader/MultiLogtypeTablesManager.hpp
         src/streaming_archive/reader/Message.cpp
         src/streaming_archive/reader/Message.hpp
         src/streaming_archive/reader/Segment.cpp
@@ -765,6 +794,10 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
+        src/streaming_archive/writer/GLTSegment.cpp
+        src/streaming_archive/writer/GLTSegment.hpp
+        src/streaming_archive/writer/LogtypeTable.cpp
+        src/streaming_archive/writer/LogtypeTable.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Compressor.cpp

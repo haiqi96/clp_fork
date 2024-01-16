@@ -27,7 +27,8 @@ using std::unique_ptr;
 using std::unordered_set;
 
 namespace clp {
-    bool decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
+
+    bool glt_decompress (CommandLineArguments& command_line_args, const unordered_set<string>& files_to_decompress) {
         ErrorCode error_code;
 
         // Create output directory in case it doesn't exist
@@ -72,7 +73,7 @@ namespace clp {
             global_metadata_db->open();
             if (files_to_decompress.empty()) {
                 for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
-                        archive_ix->contains_element(); archive_ix->get_next())
+                     archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;
@@ -108,7 +109,7 @@ namespace clp {
             } else if (files_to_decompress.size() == 1) {
                 const auto& file_path = *files_to_decompress.begin();
                 for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator_for_file_path(file_path));
-                         archive_ix->contains_element(); archive_ix->get_next())
+                     archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;
@@ -134,7 +135,7 @@ namespace clp {
                 }
             } else { // files_to_decompress.size() > 1
                 for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
-                        archive_ix->contains_element(); archive_ix->get_next())
+                     archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;

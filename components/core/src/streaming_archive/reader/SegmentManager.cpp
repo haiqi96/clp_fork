@@ -2,7 +2,7 @@
 
 using std::string;
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     void SegmentManager::open (const string& segment_dir_path) {
         // Cleanup in case caller forgot to call close before calling this function
         close();
@@ -43,4 +43,4 @@ namespace streaming_archive { namespace reader {
         auto& segment = m_id_to_open_segment.at(segment_id);
         return segment.try_read(decompressed_stream_pos, extraction_buf, extraction_len);
     }
-} }
+}

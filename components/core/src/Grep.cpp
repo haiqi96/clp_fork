@@ -13,6 +13,8 @@ using std::string;
 using std::vector;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
+using streaming_archive::reader::clp::CLPArchive;
+using streaming_archive::reader::clp::CLPFile;
 using streaming_archive::reader::Message;
 
 // Local types
@@ -233,7 +235,7 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
  * @param compressed_msg
  * @return true on success, false otherwise
  */
-static bool find_matching_message (const Query& query, Archive& archive, const SubQuery*& matching_sub_query, File& compressed_file, Message& compressed_msg);
+static bool find_matching_message (const Query& query, CLPArchive& archive, const SubQuery*& matching_sub_query, CLPFile& compressed_file, Message& compressed_msg);
 /**
  * Generates logtypes and variables for subquery
  * @param archive
@@ -289,7 +291,7 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
     return true;
 }
 
-static bool find_matching_message (const Query& query, Archive& archive, const SubQuery*& matching_sub_query, File& compressed_file, Message& compressed_msg) {
+static bool find_matching_message (const Query& query, CLPArchive& archive, const SubQuery*& matching_sub_query, CLPFile& compressed_file, Message& compressed_msg) {
     if (query.contains_sub_queries()) {
         matching_sub_query = archive.find_message_matching_query(compressed_file, query, compressed_msg);
         if (nullptr == matching_sub_query) {
@@ -690,7 +692,7 @@ void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, 
     }
 }
 
-size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archive, File& compressed_file, OutputFunc output_func, void* output_func_arg) {
+size_t Grep::search_and_output (const Query& query, size_t limit, CLPArchive& archive, CLPFile& compressed_file, OutputFunc output_func, void* output_func_arg) {
     size_t num_matches = 0;
 
     Message compressed_msg;
@@ -731,7 +733,7 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
     return num_matches;
 }
 
-bool Grep::search_and_decompress (const Query& query, Archive& archive, File& compressed_file, Message& compressed_msg, string& decompressed_msg) {
+bool Grep::search_and_decompress (const Query& query, CLPArchive& archive, CLPFile& compressed_file, Message& compressed_msg, string& decompressed_msg) {
     const string& orig_file_path = compressed_file.get_orig_path();
 
     bool matched = false;
@@ -766,7 +768,7 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
     return true;
 }
 
-size_t Grep::search (const Query& query, size_t limit, Archive& archive, File& compressed_file) {
+size_t Grep::search (const Query& query, size_t limit, CLPArchive& archive, CLPFile& compressed_file) {
     size_t num_matches = 0;
 
     Message compressed_msg;

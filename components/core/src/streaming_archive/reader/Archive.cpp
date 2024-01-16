@@ -8,9 +8,6 @@
 #include <fstream>
 #include <vector>
 
-// Boost libraries
-#include <boost/filesystem.hpp>
-
 // spdlog
 #include <spdlog/spdlog.h>
 
@@ -23,7 +20,8 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
+
     void Archive::read_metadata_file (const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
         FileReader file_reader;
         file_reader.open(path);
@@ -72,9 +70,6 @@ namespace streaming_archive { namespace reader {
             throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
         }
 
-        auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
-        m_metadata_db.open(metadata_db_path.string());
-
         // Open log-type dictionary
         string logtype_dict_path = m_path;
         logtype_dict_path += '/';
@@ -98,19 +93,29 @@ namespace streaming_archive { namespace reader {
         m_segments_dir_path += '/';
         m_segments_dir_path += cSegmentsDirname;
         m_segments_dir_path += '/';
-        m_segment_manager.open(m_segments_dir_path);
 
         // Open segment list
         string segment_list_path = m_segments_dir_path;
         segment_list_path += cSegmentListFilename;
+
+        // Open metadataDB
+        auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
+        m_metadata_db.open(metadata_db_path.string());
+
+        // Set invalid segment ID
+        m_current_segment_id = INT64_MAX;
     }
 
     void Archive::close () {
+        // close GLT
+        m_segment.close();
+        m_message_order_table.close();
+
+        m_metadata_db.close();
+
         m_logtype_dictionary.close();
         m_var_dictionary.close();
-        m_segment_manager.close();
         m_segments_dir_path.clear();
-        m_metadata_db.close();
         m_path.clear();
     }
 
@@ -119,36 +124,12 @@ namespace streaming_archive { namespace reader {
         m_var_dictionary.read_new_entries();
     }
 
-    ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix) {
-        return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment_manager);
-    }
-
-    void Archive::close_file (File& file) {
-        file.close_me();
-    }
-
-    void Archive::reset_file_indices (streaming_archive::reader::File& file) {
-        file.reset_indices();
-    }
-
     const LogTypeDictionaryReader& Archive::get_logtype_dictionary () const {
         return m_logtype_dictionary;
     }
 
     const VariableDictionaryReader& Archive::get_var_dictionary () const {
         return m_var_dictionary;
-    }
-
-    bool Archive::find_message_in_time_range (File& file, epochtime_t search_begin_timestamp, epochtime_t search_end_timestamp, Message& msg) {
-        return file.find_message_in_time_range(search_begin_timestamp, search_end_timestamp, msg);
-    }
-
-    const SubQuery* Archive::find_message_matching_query (File& file, const Query& query, Message& msg) {
-        return file.find_message_matching_query(query, msg);
-    }
-
-    bool Archive::get_next_message (File& file, Message& msg) {
-        return file.get_next_message(msg);
     }
 
     bool Archive::decompress_message (File& file, const Message& compressed_msg, string& decompressed_msg) {
@@ -198,4 +179,41 @@ namespace streaming_archive { namespace reader {
             }
         }
     }
-} }
+
+    // GLT functions
+    ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix) {
+        const auto segment_id = file_metadata_ix.get_segment_id();
+        if (segment_id != m_current_segment_id) {
+            if (m_current_segment_id != INT64_MAX) {
+                m_segment.close();
+                m_message_order_table.close();
+            }
+            ErrorCode error_code = m_segment.try_open(m_segments_dir_path, segment_id);
+            if(error_code != ErrorCode_Success) {
+                m_segment.close();
+                return error_code;
+            }
+            error_code = m_message_order_table.try_open(m_segments_dir_path, segment_id);
+            if(error_code != ErrorCode_Success) {
+                m_message_order_table.close();
+                m_segment.close();
+                return error_code;
+            }
+            m_current_segment_id = segment_id;
+        }
+        return file.open(m_logtype_dictionary, file_metadata_ix, m_segment, m_message_order_table);
+    }
+
+    void Archive::close_file (File& file) {
+        file.close();
+    }
+
+    void Archive::reset_file_indices (File& file) {
+        file.reset_indices();
+    }
+
+
+    bool Archive::get_next_message (File& file, Message& msg) {
+        return file.get_next_message(msg);
+    }
+}

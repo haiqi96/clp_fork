@@ -16,7 +16,6 @@
 // Project headers
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../streaming_archive/writer/Archive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"
@@ -90,14 +89,20 @@ namespace clp {
         archive_user_config.id = uuid_generator();
         archive_user_config.creator_id = uuid_generator();
         archive_user_config.creation_num = 0;
-        archive_user_config.target_segment_uncompressed_size = command_line_args.get_target_segment_uncompressed_size();
+        archive_user_config.target_segment_uncompressed_size =
+                command_line_args.get_target_segment_uncompressed_size();
         archive_user_config.compression_level = command_line_args.get_compression_level();
+        archive_user_config.glt_combine_threshold = command_line_args.get_glt_combine_threshold();
         archive_user_config.output_dir = command_line_args.get_output_dir();
         archive_user_config.global_metadata_db = global_metadata_db.get();
-        archive_user_config.print_archive_stats_progress = command_line_args.print_archive_stats_progress();
+        archive_user_config.print_archive_stats_progress =
+                command_line_args.print_archive_stats_progress();
 
         // Open Archive
-        streaming_archive::writer::Archive archive_writer;
+        unique_ptr<streaming_archive::writer::Archive> archive_writer_ptr;
+        archive_writer_ptr = std::make_unique<streaming_archive::writer::Archive>();
+        auto& archive_writer = *archive_writer_ptr;
+
         // Set schema file if specified by user
         if (false == command_line_args.get_use_heuristic()) {
             archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();

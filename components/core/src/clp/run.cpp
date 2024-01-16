@@ -90,29 +90,29 @@ namespace clp {
             }
 
             bool compression_successful;
-            try {
+            //try {
                 compression_successful = compress(command_line_args, files_to_compress, empty_directory_paths, grouped_files_to_compress,
                                                   command_line_args.get_target_encoded_file_size(), std::move(log_parser),
                                                   command_line_args.get_use_heuristic());
-            } catch (TraceableException& e) {
-                ErrorCode error_code = e.get_error_code();
-                if (ErrorCode_errno == error_code) {
-                    SPDLOG_ERROR("Compression failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
-                    compression_successful = false;
-                } else {
-                    SPDLOG_ERROR("Compression failed: {}:{} {}, error_code={}", e.get_filename(), e.get_line_number(), e.what(), error_code);
-                    compression_successful = false;
-                }
-            } catch (std::exception& e) {
-                SPDLOG_ERROR("Compression failed: Unexpected exception - {}", e.what());
-                compression_successful = false;
-            }
+//            } catch (TraceableException& e) {
+//                ErrorCode error_code = e.get_error_code();
+//                if (ErrorCode_errno == error_code) {
+//                    SPDLOG_ERROR("Compression failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
+//                    compression_successful = false;
+//                } else {
+//                    SPDLOG_ERROR("Compression failed: {}:{} {}, error_code={}", e.get_filename(), e.get_line_number(), e.what(), error_code);
+//                    compression_successful = false;
+//                }
+//            } catch (std::exception& e) {
+//                SPDLOG_ERROR("Compression failed: Unexpected exception - {}", e.what());
+//                compression_successful = false;
+//            }
             if (!compression_successful) {
                 return -1;
             }
         } else { // CommandLineArguments::Command::Extract == command
             unordered_set<string> files_to_decompress(input_paths.cbegin(), input_paths.cend());
-            if (!decompress(command_line_args, files_to_decompress)) {
+            if (!glt_decompress(command_line_args, files_to_decompress)) {
                 return -1;
             }
         }

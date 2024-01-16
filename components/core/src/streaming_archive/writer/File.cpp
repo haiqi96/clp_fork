@@ -8,49 +8,57 @@ using std::to_string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive { namespace writer {
+namespace streaming_archive::writer {
     void File::open () {
-        if (m_is_written_out) {
+        if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_timestamps = std::make_unique<PageAllocatedVector<epochtime_t>>();
-        m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
-        m_variables = std::make_unique<PageAllocatedVector<encoded_variable_t>>();
         m_is_open = true;
+
+        // Reset variables
+        m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
+        m_offset = std::make_unique<PageAllocatedVector<size_t>>();
     }
 
-    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment) {
+    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
+                                     Segment& segment) {
         if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
 
         // Append files to segment
-        uint64_t segment_timestamps_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_timestamps->data()), m_timestamps->size_in_bytes(), segment_timestamps_uncompressed_pos);
         uint64_t segment_logtypes_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_logtypes->data()), m_logtypes->size_in_bytes(), segment_logtypes_uncompressed_pos);
-        uint64_t segment_variables_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_variables->data()), m_variables->size_in_bytes(), segment_variables_uncompressed_pos);
-        set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
-        m_segmentation_state = SegmentationState_MovingToSegment;
+        segment.append(reinterpret_cast<const char*>(m_logtypes->data()),
+                       m_logtypes->size_in_bytes(), segment_logtypes_uncompressed_pos);
+        uint64_t segment_offset_uncompressed_pos;
+        segment.append(reinterpret_cast<const char*>(m_offset->data()), m_offset->size_in_bytes(),
+                       segment_offset_uncompressed_pos);
+        set_segment_metadata(segment.get_id(), segment_logtypes_uncompressed_pos,
+                             segment_offset_uncompressed_pos);
 
-        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
-        m_is_written_out = true;
-        m_timestamps.reset(nullptr);
+        // clear in-memory columns
         m_logtypes.reset(nullptr);
-        m_variables.reset(nullptr);
+        m_offset.reset(nullptr);
+        m_logtype_id_occurance.clear();
     }
 
-    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
-                                  const vector<variable_dictionary_id_t>& var_ids, size_t num_uncompressed_bytes)
-    {
-        m_timestamps->push_back(timestamp);
+    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id,
+                                  size_t vars_offset, size_t num_uncompressed_bytes, size_t num_vars) {
         m_logtypes->push_back(logtype_id);
-        m_variables->push_back_all(encoded_vars);
+        // For each file, the offset is only needed for a
+        // logtype's first occurrence. else set to 0
+        // GLT TODO: create a separate id->first_offset map
+        // per file to avoid storing duplicated 0
+        if (m_logtype_id_occurance.count(logtype_id) == 0) {
+            m_logtype_id_occurance.insert(logtype_id);
+            m_offset->push_back(vars_offset);
+        } else {
+            m_offset->push_back(0);
+        }
 
         // Update metadata
         ++m_num_messages;
-        m_num_variables += encoded_vars.size();
+        m_num_variables += num_vars;
 
         if (timestamp < m_begin_ts) {
             m_begin_ts = timestamp;
@@ -60,7 +68,6 @@ namespace streaming_archive { namespace writer {
         }
 
         m_num_uncompressed_bytes += num_uncompressed_bytes;
-        m_is_metadata_clean = false;
     }
 
     void File::change_ts_pattern (const TimestampPattern* pattern) {
@@ -69,23 +76,6 @@ namespace streaming_archive { namespace writer {
         } else {
             m_timestamp_patterns.emplace_back(m_num_messages, *pattern);
         }
-        m_is_metadata_clean = false;
-    }
-
-    bool File::is_in_uncommitted_segment () const {
-        return (SegmentationState_MovingToSegment == m_segmentation_state);
-    }
-
-    void File::mark_as_in_committed_segment () {
-        m_segmentation_state = SegmentationState_InSegment;
-    }
-
-    bool File::is_metadata_dirty () const {
-        return !m_is_metadata_clean;
-    }
-
-    void File::mark_metadata_as_clean () {
-        m_is_metadata_clean = true;
     }
 
     string File::get_encoded_timestamp_patterns () const {
@@ -107,13 +97,11 @@ namespace streaming_archive { namespace writer {
         return encoded_timestamp_patterns;
     }
 
-    void File::set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,
-                                     uint64_t segment_variables_uncompressed_pos)
-    {
+    void File::set_segment_metadata (segment_id_t segment_id,
+                                     uint64_t segment_logtypes_uncompressed_pos,
+                                     uint64_t segment_offset_uncompressed_pos) {
         m_segment_id = segment_id;
-        m_segment_timestamps_pos = segment_timestamps_uncompressed_pos;
         m_segment_logtypes_pos = segment_logtypes_uncompressed_pos;
-        m_segment_variables_pos = segment_variables_uncompressed_pos;
-        m_is_metadata_clean = false;
+        m_segment_offset_pos = segment_offset_uncompressed_pos;
     }
-} }
+}
