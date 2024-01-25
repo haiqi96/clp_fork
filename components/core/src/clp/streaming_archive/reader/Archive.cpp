@@ -72,15 +72,15 @@ void Archive::open(string const& path) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
-    auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
-    if (false == boost::filesystem::exists(metadata_db_path)) {
-        SPDLOG_ERROR(
-                "streaming_archive::reader::Archive: Metadata DB not found: {}",
-                metadata_db_path.string()
-        );
+    auto boost_metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
+    if (false == boost::filesystem::exists(boost_metadata_db_path)) {
+        SPDLOG_ERROR("streaming_archive::reader::Archive: Metadata DB not found: {}", boost_metadata_db_path.string());
         throw OperationFailed(ErrorCode_FileNotFound, __FILENAME__, __LINE__);
     }
-    m_metadata_db.open(metadata_db_path.string());
+    auto boost_temp_metadata_db_path = boost::filesystem::path("/home/haiqixu/temp_metadata_clg") / cMetadataDBFileName;
+    std::ignore = boost::filesystem::remove(boost_temp_metadata_db_path);
+    boost::filesystem::copy(boost_metadata_db_path, boost_temp_metadata_db_path);
+    m_metadata_db.open(boost_temp_metadata_db_path.string());
 
     // Open log-type dictionary
     string logtype_dict_path = m_path;

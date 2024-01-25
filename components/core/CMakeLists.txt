@@ -200,6 +200,27 @@ add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 
+add_executable(test src/test/test.cpp)
+target_include_directories(test
+    PRIVATE
+    ${CMAKE_SOURCE_DIR}/submodules
+    )
+target_link_libraries(test
+    PRIVATE
+    Boost::filesystem Boost::iostreams Boost::program_options
+    fmt::fmt
+    spdlog::spdlog
+    ${sqlite_LIBRARY_DEPENDENCIES}
+    LibArchive::LibArchive
+    MariaDBClient::MariaDBClient
+    ${STD_FS_LIBS}
+    yaml-cpp::yaml-cpp
+    ZStd::ZStd
+    )
+target_compile_features(test
+    PRIVATE cxx_std_17
+    )
+
 set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
