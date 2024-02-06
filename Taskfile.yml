@@ -111,8 +111,19 @@ tasks:
 
   webui:
     deps:
+      - "webui-bundle"
       - "nodejs"
     dir: "components/webui"
+    cmds:
+      - |-
+        cd {{.WEBUI_BUILD_DIR}}/programs/server
+        PATH={{.NODEJS_BIN_DIR}}:$PATH $(readlink -f {{.NODEJS_BIN_DIR}}/npm) install
+    sources:
+      - "{{.WEBUI_BUILD_DIR}}/**/*"
+
+  webui-bundle:
+    dir: "components/webui"
+    platforms: ["386", "amd64"]
     cmds:
       - "rm -rf '{{.WEBUI_BUILD_DIR}}'"
       - "mkdir -p {{.WEBUI_BUILD_DIR}}"
@@ -125,16 +136,14 @@ tasks:
         "$PWD/launcher.js"
         "{{.WEBUI_BUILD_DIR}}/"
       - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
-      - |-
-        cd {{.WEBUI_BUILD_DIR}}/programs/server
-        PATH={{.NODEJS_BIN_DIR}}:$PATH $(readlink -f {{.NODEJS_BIN_DIR}}/npm) install
     sources:
       - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   nodejs:
     vars:
       NODEJS_VERSION: "14.21.3"
-      NODEJS_RELEASE: "v{{.NODEJS_VERSION}}-linux-x64"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      NODEJS_RELEASE: "v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
       TAR_FILENAME: "node-{{.NODEJS_RELEASE}}.tar.xz"
       TAR_FILE_PATH: "{{.NODEJS_BUILD_DIR}}/{{.TAR_FILENAME}}"
     cmds:
