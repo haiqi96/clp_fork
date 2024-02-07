@@ -295,13 +295,21 @@ tasks:
           ruff check {{.RUFF_FLAGS}} .
 
   core-submodules:
-    internal: true
     dir: "components/core"
+    vars:
+      CREATION_TIMESTAMP_FILE: "{{.BUILD_DIR}}/core_submodules_creation_time.txt"
     cmds:
+      - "mkdir -p '{{.BUILD_DIR}}'"
       - "tools/scripts/deps-download/download-all.sh"
+      # This step must be last since we use this file to detect whether the task succeeded
+      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
+    method: "timestamp"
     sources:
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
+    status:
+      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
 
   package-venv:
     internal: true
