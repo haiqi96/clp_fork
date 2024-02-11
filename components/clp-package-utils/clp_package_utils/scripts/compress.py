@@ -89,8 +89,7 @@ def main(argv):
     necessary_mounts = [
         mounts.input_logs_dir,
         mounts.data_dir,
-        mounts.logs_dir,
-        mounts.archives_output_dir,
+        mounts.logs_dir
     ]
     for mount in necessary_mounts:
         if mount:
