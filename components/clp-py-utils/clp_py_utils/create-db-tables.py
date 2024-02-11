@@ -14,6 +14,41 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
+def drop_tables(config_file_path: str):
+    try:
+        database_config = Database.parse_obj(read_yaml_config_file(config_file_path))
+        if database_config is None:
+            raise ValueError(f"Database configuration file '{config_file_path}' is empty.")
+        sql_adapter = SQL_Adapter(database_config)
+        clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+        table_prefix = clp_db_connection_params["table_prefix"]
+        with closing(sql_adapter.create_connection(True)) as clp_db, closing(
+            clp_db.cursor(dictionary=True)
+        ) as clp_db_cursor:
+            clp_db.execute(
+                f"DROP TABLE IF EXISTS `{table_prefix}files`"
+            )
+            clp_db.execute(
+                f"DROP TABLE IF EXISTS `{table_prefix}archives`"
+            )
+            
+            scheduling_db_cursor.execute(
+                f"DROP TABLE IF EXISTS `{SEARCH_JOBS_TABLE_NAME}`"
+            )
+            scheduling_db_cursor.execute(
+                f"DROP TABLE IF EXISTS `{COMPRESSION_TASKS_TABLE_NAME}`"
+            )
+            scheduling_db_cursor.execute(
+                f"DROP TABLE IF EXISTS `{COMPRESSION_JOBS_TABLE_NAME}`"
+            )
+
+            metadata_db.commit()
+    except:
+        logger.exception("Failed to drop clp database tables.")
+        return -1
+
+    return 0
+
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates database tables for CLP.")
@@ -21,6 +56,8 @@ def main(argv):
     parsed_args = args_parser.parse_args(argv[1:])
 
     config_file_path = pathlib.Path(parsed_args.config)
+
+    drop_tables(config_file_path)
 
     script_dir = pathlib.Path(__file__).parent.resolve()
 
