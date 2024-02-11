@@ -274,7 +274,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     rabbitmq_cmd = ["rabbitmqctl", "status"]
     # fmt: on
 
-    if not wait_for_container_cmd(container_name, rabbitmq_cmd, 10):
+    if not wait_for_container_cmd(container_name, rabbitmq_cmd, 30):
         raise EnvironmentError(f"{QUEUE_COMPONENT_NAME} did not initialize in time")
 
     logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
