@@ -46,9 +46,6 @@ def main(argv):
             scheduling_db.cursor(dictionary=True)
         ) as scheduling_db_cursor:
             scheduling_db_cursor.execute(
-                f"DROP TABLE IF EXISTS `{COMPRESSION_JOBS_TABLE_NAME}`"
-            )
-            scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
@@ -70,9 +67,6 @@ def main(argv):
                 """
             )
 
-            scheduling_db_cursor.execute(
-                f"DROP TABLE IF EXISTS `{COMPRESSION_TASKS_TABLE_NAME}`"
-            )
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_TASKS_TABLE_NAME}` (
@@ -96,9 +90,6 @@ def main(argv):
                 """
             )
 
-            scheduling_db_cursor.execute(
-                f"DROP TABLE IF EXISTS `{SEARCH_JOBS_TABLE_NAME}`"
-            )
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (

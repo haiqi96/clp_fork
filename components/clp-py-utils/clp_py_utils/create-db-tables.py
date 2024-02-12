@@ -31,7 +31,6 @@ def drop_tables(config_file_path: str):
             clp_db.execute(
                 f"DROP TABLE IF EXISTS `{table_prefix}archives`"
             )
-            
             scheduling_db_cursor.execute(
                 f"DROP TABLE IF EXISTS `{SEARCH_JOBS_TABLE_NAME}`"
             )

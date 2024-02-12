@@ -35,14 +35,6 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            metadata_db_cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-            metadata_db_cursor.execute(
-                f"DROP TABLE IF EXISTS `{table_prefix}archives`"
-            )
-            metadata_db_cursor.execute(
-                f"DROP TABLE IF EXISTS `{table_prefix}files`"
-            )
-            metadata_db_cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
             metadata_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
