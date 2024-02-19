@@ -280,7 +280,9 @@ private:
     // Variables
     boost::uuids::uuid m_id;
     std::string m_id_as_string;
-
+    std::string temp_metadata_db_path;
+    std::string metadata_db_path;
+    
     // Used to order the archives created by a single thread
     // NOTE: This is necessary because files may be split across archives and we want to
     // decompress their parts in order.

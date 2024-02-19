@@ -115,8 +115,9 @@ void Archive::open(UserConfig const& user_config) {
     }
 
     // Create metadata database
-    auto metadata_db_path = archive_path / cMetadataDBFileName;
-    m_metadata_db.open(metadata_db_path.string());
+    metadata_db_path = archive_path / cMetadataDBFileName;
+    temp_metadata_db_path = std::filesystem::path("/home/haiqixu/temp_metadata/") / cMetadataDBFileName;
+    m_metadata_db.open(temp_metadata_db_path);
 
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
@@ -241,6 +242,8 @@ void Archive::close() {
     m_global_metadata_db = nullptr;
 
     m_metadata_db.close();
+    std::filesystem::copy(temp_metadata_db_path, metadata_db_path);
+    std::filesystem::remove(temp_metadata_db_path);
 
     m_creator_id_as_string.clear();
     m_id_as_string.clear();
