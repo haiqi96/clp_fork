@@ -12,6 +12,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   curl \
   libmariadb-dev \
   libssl-dev \
+  libspdlog-dev \
   python3 \
   rsync \
   zstd
