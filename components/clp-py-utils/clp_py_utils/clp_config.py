@@ -300,7 +300,7 @@ class WebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: str = "ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main"
+    execution_container: str = "clp-execution-x86-ubuntu-jammy:dev"
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
