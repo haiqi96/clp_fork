@@ -7,8 +7,6 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../Defs.h"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
@@ -22,8 +20,6 @@ using clp::epochtime_t;
 using clp::ErrorCode;
 using clp::ErrorCode_errno;
 using clp::FileReader;
-using clp::GlobalMetadataDB;
-using clp::GlobalMetadataDBConfig;
 using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::Profiler;
@@ -113,36 +109,6 @@ static void print_result_binary(
         string const& decompressed_msg,
         void* custom_arg
 );
-
-/**
- * Gets an archive iterator for the given file path or for all files if the file path is empty
- * @param global_metadata_db
- * @param file_path
- * @param begin_ts
- * @param end_ts
- * @return An archive iterator
- */
-static GlobalMetadataDB::ArchiveIterator* get_archive_iterator(
-        GlobalMetadataDB& global_metadata_db,
-        std::string const& file_path,
-        epochtime_t begin_ts,
-        epochtime_t end_ts
-);
-
-static GlobalMetadataDB::ArchiveIterator* get_archive_iterator(
-        GlobalMetadataDB& global_metadata_db,
-        std::string const& file_path,
-        epochtime_t begin_ts,
-        epochtime_t end_ts
-) {
-    if (!file_path.empty()) {
-        return global_metadata_db.get_archive_iterator_for_file_path(file_path);
-    } else if (begin_ts == clp::cEpochTimeMin && end_ts == clp::cEpochTimeMax) {
-        return global_metadata_db.get_archive_iterator();
-    } else {
-        return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
-    }
-}
 
 static bool open_archive(string const& archive_path, Archive& archive_reader) {
     ErrorCode error_code;
@@ -520,30 +486,6 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path
-                    = archives_dir / clp::streaming_archive::cMetadataDBFileName;
-            global_metadata_db
-                    = std::make_unique<clp::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
-                    );
-            break;
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username(),
-                    global_metadata_db_config.get_metadata_db_password(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-            break;
-    }
-    global_metadata_db->open();
-
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;
@@ -554,93 +496,28 @@ int main(int argc, char const* argv[]) {
     log_surgeon::lexers::ByteLexer* forward_lexer_ptr;
     log_surgeon::lexers::ByteLexer* reverse_lexer_ptr;
 
-    string archive_id;
     Archive archive_reader;
-    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(
-                 *global_metadata_db,
-                 command_line_args.get_file_path(),
-                 command_line_args.get_search_begin_ts(),
-                 command_line_args.get_search_end_ts()
-         ));
-         archive_ix->contains_element();
-         archive_ix->get_next())
-    {
-        archive_ix->get_id(archive_id);
-        auto archive_path = archives_dir / archive_id;
+        auto archive_path = archives_dir;
 
-        if (false == std::filesystem::exists(archive_path)) {
-            SPDLOG_WARN(
-                    "Archive {} does not exist in '{}'.",
-                    archive_id,
-                    command_line_args.get_archives_dir()
-            );
-            continue;
-        }
-
-        // Open archive
-        if (!open_archive(archive_path.string(), archive_reader)) {
-            return -1;
-        }
-
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-        bool use_heuristic = true;
-        if (std::filesystem::exists(schema_file_path)) {
-            use_heuristic = false;
-
-            char buf[max_map_schema_length];
-            FileReader file_reader;
-            file_reader.try_open(schema_file_path);
-
-            size_t num_bytes_read;
-            file_reader.read(buf, max_map_schema_length, num_bytes_read);
-            if (num_bytes_read < max_map_schema_length) {
-                auto forward_lexer_map_it = forward_lexer_map.find(buf);
-                auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
-                // if there is a chance there might be a difference make a new lexer as it's pretty
-                // fast to create
-                if (forward_lexer_map_it == forward_lexer_map.end()) {
-                    // Create forward lexer
-                    auto insert_result
-                            = forward_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    forward_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
-
-                    // Create reverse lexer
-                    insert_result
-                            = reverse_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    reverse_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
-                } else {
-                    // load the lexers if they already exist
-                    forward_lexer_ptr = &forward_lexer_map_it->second;
-                    reverse_lexer_ptr = &reverse_lexer_map_it->second;
-                }
-            } else {
-                // Create forward lexer
-                forward_lexer_ptr = &one_time_use_forward_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
-
-                // Create reverse lexer
-                reverse_lexer_ptr = &one_time_use_reverse_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
-            }
-        }
-
-        // Perform search
-        if (!search(search_strings,
-                    command_line_args,
-                    archive_reader,
-                    *forward_lexer_ptr,
-                    *reverse_lexer_ptr,
-                    use_heuristic))
-        {
-            return -1;
-        }
-        archive_reader.close();
+    if (false == std::filesystem::exists(archives_dir)) {
+        SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_path.string(), command_line_args.get_archives_dir());
+        return -1;
     }
 
-    global_metadata_db->close();
+    // Open archive
+    if (!open_archive(archive_path.string(), archive_reader)) {
+        return -1;
+    }
+
+    // Generate lexer if schema file exists
+    bool use_heuristic = true;
+
+    // Perform search
+    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
+        return -1;
+    }
+    archive_reader.close();
+
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
