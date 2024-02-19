@@ -156,7 +156,7 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     ]
     # fmt: on
 
-    if not wait_for_container_cmd(container_name, mysqladmin_cmd, 30):
+    if not wait_for_container_cmd(container_name, mysqladmin_cmd, 300):
         raise EnvironmentError(f"{DB_COMPONENT_NAME} did not initialize in time")
 
     logger.info(f"Started {DB_COMPONENT_NAME}.")
