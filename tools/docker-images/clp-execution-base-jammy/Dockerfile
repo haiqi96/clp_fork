@@ -6,6 +6,9 @@ RUN mkdir -p ./tools/docker-images/clp-execution-base-jammy
 ADD ./tools/docker-images/clp-execution-base-jammy/setup-scripts ./tools/docker-images/clp-execution-base-jammy/setup-scripts
 
 RUN ./tools/docker-images/clp-execution-base-jammy/setup-scripts/install-prebuilt-packages.sh
+RUN ./tools/docker-images/clp-execution-base-jammy/setup-scripts/configure-fuse.sh
+
+ADD ./tools/docker-images/clp-execution-base-jammy/fuse.conf /etc/fuse.conf
 
 # Remove cached files
 RUN apt-get clean \
