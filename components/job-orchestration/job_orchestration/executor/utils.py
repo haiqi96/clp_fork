@@ -8,13 +8,12 @@ from threading import Thread
 from typing import Any, Dict, Optional, Tuple
 
 from celery.utils.log import get_task_logger
+from job_orchestration.executor.credentials import HARDCODED_S3_CONFIG, USE_FUSE_LAYER
 from remote_fuse_layer.s3 import (
     clp_s3_fuse_sequential_read_thread_method,
     s3_fuse_mostly_sequential_write_thread_method,
     S3MountConfig,
 )
-
-from job_orchestration.executor.credentials import HARDCODED_S3_CONFIG, USE_FUSE_LAYER
 
 # Setup logging
 logger = get_task_logger(__name__)

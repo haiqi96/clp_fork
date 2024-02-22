@@ -8,7 +8,6 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import StorageEngine
-
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.executor.utils import post_cleanup, setup_writer_archive_directory
 from job_orchestration.scheduler.constants import CompressionTaskStatus

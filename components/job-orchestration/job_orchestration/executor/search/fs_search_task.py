@@ -9,7 +9,6 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
-
 from job_orchestration.executor.search.celery import app
 from job_orchestration.executor.utils import post_cleanup, setup_reader_archive_directory
 from job_orchestration.scheduler.job_config import SearchConfig
