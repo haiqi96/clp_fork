@@ -58,6 +58,8 @@ METADATA_FILENAMES = [
     "var.segindex",
 ]
 
+CLP_SCHEMA_FILE = "schema.txt"
+
 # Types
 class DiskCacheEvictionPolicies:
     LRS = "least-recently-stored"  # fastest
@@ -796,9 +798,13 @@ class CLPS3FuseSequentialRead(Operations):
                 fake_attribute['st_mode'] = 33206
                 return fake_attribute
             raise FuseOSError(errno.ENOENT)
-
+        elif CLP_SCHEMA_FILE == name:
+            # TODO: Language
+            # We don't support schema now for the god's sake
+            raise FuseOSError(errno.ENOENT)
         else:
             file_attribute = self.generate_file_attribute(self.fake_file_size)
+            # For metadata DB, we will need to actually
             if 'metadata.db' in fuse_path_str:
                 total_sleep_time = 0
                 while fuse_path_str not in self.file_size:
@@ -1117,7 +1123,6 @@ class S3FuseMostlySequentialWrite(Operations):
 
         # Only creation of files goes to this path, so we need to determine whether it is a metadata file
         name = self.get_name(fuse_path_str)
-        #if name in METADATA_FILENAMES or name in METADATA_GENERATED_FILES:
         if name in METADATA_FILENAMES or name in METADATA_GENERATED_FILES:
             raw_fi.keep_cache = METADATA_USE_KERNEL_PAGE_CACHE_FOR_WRITE  # Enable kernel file cache
             archive_name = self.get_archive_name(fuse_path_str)
@@ -1126,6 +1131,10 @@ class S3FuseMostlySequentialWrite(Operations):
             index = self.archive_metadata_containers[archive_name].filename_to_index_mapping[name]
             logger.debug(f'create: path with metadata file=' + fuse_path_str)
             self.archive_metadata_containers[archive_name].metadata_files[index].create_and_open()
+        elif CLP_SCHEMA_FILE == name:
+            # TODO: Language
+            # We don't support schema now for the god's sake
+            raise FuseOSError(errno.ENOENT)
         else:
             logger.debug('create: path with object stream=' + fuse_path_str)
             # Segment files are usually large and is written to its own file
@@ -1316,12 +1325,6 @@ def s3_fuse_ir_write_thread_method(s3_mount_config: S3MountConfig, mount_path: p
 
 
 def clp_s3_fuse_sequential_read_thread_method(s3_mount_config: S3MountConfig, mount_dir: pathlib.Path, mount_cache_dir: pathlib.Path, max_file_size: int):
-    # Create directories
-    mount_dir.mkdir(parents=True, exist_ok=True)
-    if mount_cache_dir.exists():
-        shutil.rmtree(mount_cache_dir)
-    mount_cache_dir.mkdir(parents=True, exist_ok=True)
-
     # Create metadata cache and start thread to download it upon request
     exit_request_event = threading.Event()
     on_disk_metadata_cache = diskcache.Cache(directory=str(mount_cache_dir), size_limit=1 * 1024 * 1024 * 1024,
@@ -1341,7 +1344,3 @@ def clp_s3_fuse_sequential_read_thread_method(s3_mount_config: S3MountConfig, mo
     # Put something on the cache queue to unblock the thread if it's waiting
     cache_requests_queue.put((None, None))
     metadata_downloader_thread.join()
-
-    # Remove directories
-    shutil.rmtree(mount_dir)
-    shutil.rmtree(mount_cache_dir)

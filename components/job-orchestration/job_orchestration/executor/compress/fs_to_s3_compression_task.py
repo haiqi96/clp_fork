@@ -24,9 +24,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskSuccessResult,
 )
 
-from job_orchestration.executor.compress.credentials import (
-    HARDCODED_S3_CONFIG
-)
+from job_orchestration.executor.credentials import HARDCODED_S3_CONFIG
 
 from remote_fuse_layer.s3 import (
     S3MountConfig,
