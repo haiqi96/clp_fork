@@ -20,8 +20,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.fs_compression_task import compress as fs_to_fs_compress
-from job_orchestration.executor.compress.fs_to_s3_compression_task import compress as fs_to_s3_compress
+from job_orchestration.executor.compress.fs_compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig
@@ -186,7 +185,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 (partition_info[task_idx]["clp_paths_to_compress"],),
             )
             task["task_id"] = db_cursor.lastrowid
-            task_instances.append(fs_to_s3_compress.s(**task))
+            task_instances.append(compress.s(**task))
         db_conn.commit()
         tasks_group = celery.group(task_instances)
 
