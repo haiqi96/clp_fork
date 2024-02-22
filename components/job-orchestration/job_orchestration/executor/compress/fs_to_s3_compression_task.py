@@ -1,13 +1,19 @@
 import datetime
+import errno
 import json
-import logging
 import os
-import pathlib
+import time
+from pathlib import Path
+import shutil
 import subprocess
+from typing import Dict, Any, Tuple
+
+from threading import Thread
 
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
+
 from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.executor.compress.utils import make_clp_command, make_clp_s_command
@@ -18,21 +24,108 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskSuccessResult,
 )
 
+from job_orchestration.executor.compress.credentials import (
+    HARDCODED_S3_CONFIG
+)
+
+from remote_fuse_layer.s3 import (
+    S3MountConfig,
+    s3_fuse_mostly_sequential_write_thread_method
+)
 # Setup logging
 logger = get_task_logger(__name__)
 
 
+def _get_mount_cache_path(mount_path: Path) -> Path:
+    return mount_path.parent / ("." + mount_path.name)
+
+
+def _remove_and_mkdir(dir_path: Path, is_fuse_mount: bool = False) -> None:
+    try:
+        if dir_path.exists():
+            shutil.rmtree(dir_path)
+    except OSError as e:
+        if is_fuse_mount and e.errno == errno.ENOTCONN:
+            # ENOTCONN corresponds to
+            # "transport endpoint is not connected: <mount_point>"
+            subprocess.run(["fusermount", "-u", str(dir_path)])
+            if dir_path.exists():
+                shutil.rmtree(dir_path)
+        else:
+            raise e
+
+    dir_path.mkdir(parents=True)
+
+
+def _get_s3_mount_config(s3_yaml_config: Dict[str, Any]) -> S3MountConfig:
+    return S3MountConfig(
+        access_key_id=s3_yaml_config["access_key_id"],
+        secret_access_key=s3_yaml_config["secret_access_key"],
+        s3_path_prefix_str=s3_yaml_config["s3_path_prefix"],
+        endpoint_url=s3_yaml_config["endpoint_url"],
+        s3_path_prefix_to_remove_from_mount=None,
+    )
+
+
+def _await_fuse_mount(mount_path: Path) -> None:
+    logger.info(f"Waiting for {mount_path} to mount...")
+    while not os.path.ismount(mount_path):
+        time.sleep(0.01)
+    logger.info(f"{mount_path} mounted.")
+
+
+def _unmount_fuse(mount_path: Path, fuse_thread: Thread) -> None:
+    logger.info(f"Unmounting {mount_path}...")
+    subprocess.run(
+        ["fusermount", "-u", str(mount_path)],
+        close_fds=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+
+    logger.info("Waiting for the FUSE thread to exit...")
+    fuse_thread.join()
+    logger.info("FUSE thread exited.")
+    shutil.rmtree(mount_path)
+    shutil.rmtree(_get_mount_cache_path(mount_path))
+
+
+def _create_writer_fuse_thread(
+    s3_writer_config: Dict[str, Any], mount_path: Path
+) -> Thread:
+
+    # Create mount path
+    _remove_and_mkdir(mount_path, is_fuse_mount=True)
+
+    # Create mount cache
+    mount_cache_path = _get_mount_cache_path(mount_path)
+    _remove_and_mkdir(mount_cache_path, is_fuse_mount=False)
+
+    s3_writer_mount_config = _get_s3_mount_config(s3_writer_config)
+
+    # create the thread as daemon so they exit immediately
+    # when the main thread is cancelled
+    # TODO: verify if cancel can be run properly?
+    writer_fuse_thread = Thread(
+        target=s3_fuse_mostly_sequential_write_thread_method,
+        args=(s3_writer_mount_config, mount_path, mount_cache_path),
+        daemon=True,
+    )
+
+    return writer_fuse_thread
+
+
 def run_clp(
     clp_config: ClpIoConfig,
-    clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
-    archive_output_dir: pathlib.Path,
-    logs_dir: pathlib.Path,
+    clp_home: Path,
+    data_dir: Path,
+    archive_output_dir: Path,
+    logs_dir: Path,
     job_id: int,
     task_id: int,
     paths_to_compress: PathsToCompress,
     clp_metadata_db_connection_config,
-):
+) -> Tuple[bool, Dict[str, Any]]:
     """
     Compresses files from an FS into archives on an FS
 
@@ -97,7 +190,7 @@ def run_clp(
     stderr_log_file = open(stderr_log_path, "w")
 
     # Start compression
-    logger.debug("Compressing...")
+    logger.info("Compressing...")
     compression_successful = False
     proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
@@ -132,7 +225,7 @@ def run_clp(
         if log_list_path:
             log_list_path.unlink()
         db_config_file_path.unlink()
-    logger.debug("Compressed.")
+    logger.info("Compressed.")
 
     # Close stderr log file
     stderr_log_file.close()
@@ -144,7 +237,6 @@ def run_clp(
         }
     else:
         return compression_successful, {"error_message": f"See logs {stderr_log_path}"}
-
 
 @app.task(bind=True)
 def compress(
@@ -163,21 +255,37 @@ def compress(
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
+    # Launch the writer mount thread
+    os.environ["AWS_ACCESS_KEY_ID"] = HARDCODED_S3_CONFIG["access_key_id"]
+    os.environ["AWS_SECRET_ACCESS_KEY"] = HARDCODED_S3_CONFIG["secret_access_key"]
+
+    mount_path = Path("/") / f"writer_mount_{job_id}_{task_id}"
+    writer_fuse_thread = _create_writer_fuse_thread(HARDCODED_S3_CONFIG, mount_path)
+    writer_fuse_thread.start()
+    _await_fuse_mount(mount_path)
+
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-    compression_successful, worker_output = run_clp(
-        clp_io_config,
-        pathlib.Path(clp_home_str),
-        pathlib.Path(data_dir_str),
-        pathlib.Path(archive_output_dir_str),
-        pathlib.Path(logs_dir_str),
-        job_id,
-        task_id,
-        paths_to_compress,
-        clp_metadata_db_connection_config,
-    )
-    duration = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    try:
+        compression_successful, worker_output = run_clp(
+            clp_io_config,
+            Path(clp_home_str),
+            Path(data_dir_str),
+            Path(mount_path),
+            Path(logs_dir_str),
+            job_id,
+            task_id,
+            paths_to_compress,
+            clp_metadata_db_connection_config,
+        )
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    except Exception as err:
+        compression_successful = False
+        worker_output = {"error_message": str(err)}
+        logger.exception(f"[job_id={job_id} task_id={task_id}] COMPRESSION FAILED on exception.")
+
+    _unmount_fuse(mount_path, writer_fuse_thread)
 
     if compression_successful:
         return CompressionTaskSuccessResult(

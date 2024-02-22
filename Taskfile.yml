@@ -37,6 +37,9 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "remote-fuse-layer"
 
   clean-package:
     cmds:
@@ -74,6 +77,7 @@ tasks:
       - "package-venv"
       - "nodejs"
       - "webui"
+      - "remote-fuse-layer"
     cmds:
       - task: "clean-package"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
@@ -85,6 +89,7 @@ tasks:
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
+          components/remote-fuse-layer/dist/*.whl \
           -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
@@ -119,6 +124,7 @@ tasks:
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
+      - "components/remote-fuse-layer/dist/*.whl"
       - "components/package-template/src/**/*"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
@@ -158,6 +164,11 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   job-orchestration:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  remote-fuse-layer:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
