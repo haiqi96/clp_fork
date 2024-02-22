@@ -590,7 +590,13 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        # FUSE specific
+        "--cap-add", "SYS_ADMIN",
+        "--device", "/dev/fuse",
+        "--security-opt", "apparmor:unconfined",
+        "-u", "root",
+        # "-u", f"{os.getuid()}:{os.getgid()}",
+        # # FUSE specific ends
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
