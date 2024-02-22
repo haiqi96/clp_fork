@@ -1,16 +1,16 @@
 import datetime
 import json
-import logging
 import os
-import pathlib
 import subprocess
+from pathlib import Path
 
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import StorageEngine
+
 from job_orchestration.executor.compress.celery import app
-from job_orchestration.executor.compress.utils import make_clp_command, make_clp_s_command
+from job_orchestration.executor.utils import post_cleanup, setup_writer_archive_directory
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import (
@@ -22,12 +22,67 @@ from job_orchestration.scheduler.scheduler_data import (
 logger = get_task_logger(__name__)
 
 
+def make_clp_command(
+    clp_home: Path,
+    archive_output_dir: Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: Path,
+):
+    path_prefix_to_remove = clp_config.input.path_prefix_to_remove
+
+    # fmt: off
+    compression_cmd = [
+        str(clp_home / "bin" / "clp"),
+        "c", str(archive_output_dir),
+        "--print-archive-stats-progress",
+        "--target-dictionaries-size", str(clp_config.output.target_dictionaries_size),
+        "--target-segment-size", str(clp_config.output.target_segment_size),
+        "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
+        "--db-config-file", str(db_config_file_path),
+    ]
+    # fmt: on
+    if path_prefix_to_remove:
+        compression_cmd.append("--remove-path-prefix")
+        compression_cmd.append(path_prefix_to_remove)
+
+    # Use schema file if it exists
+    schema_path: Path = clp_home / "etc" / "clp-schema.txt"
+    if schema_path.exists():
+        compression_cmd.append("--schema-path")
+        compression_cmd.append(str(schema_path))
+
+    return compression_cmd
+
+
+def make_clp_s_command(
+    clp_home: Path,
+    archive_output_dir: Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: Path,
+):
+    # fmt: off
+    compression_cmd = [
+        str(clp_home / "bin" / "clp-s"),
+        "c", str(archive_output_dir),
+        "--print-archive-stats",
+        "--target-encoded-size", str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
+        "--db-config-file", str(db_config_file_path),
+    ]
+    # fmt: on
+
+    if clp_config.input.timestamp_key is not None:
+        compression_cmd.append("--timestamp-key")
+        compression_cmd.append(clp_config.input.timestamp_key)
+
+    return compression_cmd
+
+
 def run_clp(
     clp_config: ClpIoConfig,
-    clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
-    archive_output_dir: pathlib.Path,
-    logs_dir: pathlib.Path,
+    clp_home: Path,
+    data_dir: Path,
+    archive_output_dir: Path,
+    logs_dir: Path,
     job_id: int,
     task_id: int,
     paths_to_compress: PathsToCompress,
@@ -155,29 +210,37 @@ def compress(
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
 ):
-    clp_home_str = os.getenv("CLP_HOME")
-    data_dir_str = os.getenv("CLP_DATA_DIR")
-    archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-    logs_dir_str = os.getenv("CLP_LOGS_DIR")
+    clp_home = Path(os.getenv("CLP_HOME"))
+    data_dir = Path(os.getenv("CLP_DATA_DIR"))
+    logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
+    archive_dir, setup_info = setup_writer_archive_directory(str(job_id), str(task_id))
+
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-    compression_successful, worker_output = run_clp(
-        clp_io_config,
-        pathlib.Path(clp_home_str),
-        pathlib.Path(data_dir_str),
-        pathlib.Path(archive_output_dir_str),
-        pathlib.Path(logs_dir_str),
-        job_id,
-        task_id,
-        paths_to_compress,
-        clp_metadata_db_connection_config,
-    )
-    duration = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    try:
+        compression_successful, worker_output = run_clp(
+            clp_io_config,
+            clp_home,
+            data_dir,
+            archive_dir,
+            logs_dir,
+            job_id,
+            task_id,
+            paths_to_compress,
+            clp_metadata_db_connection_config,
+        )
+        duration = (datetime.datetime.now() - start_time).total_seconds()
+        logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    except Exception as err:
+        compression_successful = False
+        worker_output = {"error_message": str(err)}
+        logger.exception(f"[job_id={job_id} task_id={task_id}] COMPRESSION FAILED on exception.")
+
+    post_cleanup(archive_dir, setup_info)
 
     if compression_successful:
         return CompressionTaskSuccessResult(
