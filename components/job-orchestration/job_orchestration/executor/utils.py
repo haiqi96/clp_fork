@@ -131,9 +131,7 @@ def setup_reader_archive_directory(
 ) -> Tuple[Path, Optional[Dict[str, Any]]]:
     # for the normal file system flow
     if not USE_FUSE_LAYER:
-        archive_output_dir = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-        if archive_output_dir:
-            return Path(archive_output_dir), None
+        return Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR")), None
 
     # for the S3 Flow
     s3_config = HARDCODED_S3_CONFIG
@@ -164,11 +162,9 @@ def setup_writer_archive_directory(
     task_id: str,
 ) -> Tuple[Path, Optional[Dict[str, Any]]]:
 
+    # for the normal file system flow
     if not USE_FUSE_LAYER:
-        # for the normal file system flow
-        archive_output_dir = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-        if archive_output_dir:
-            return Path(archive_output_dir), None
+        return Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR")), None
 
     # for the S3 Flow
     s3_config = HARDCODED_S3_CONFIG
@@ -195,7 +191,7 @@ def setup_writer_archive_directory(
 
 def post_cleanup(archive_dir: Path, setup_config: Optional[Dict[str, Any]]) -> None:
     # Normal flow, do nothing
-    if os.getenv("CLP_ARCHIVE_OUTPUT_DIR"):
+    if not USE_FUSE_LAYER:
         return
 
     # For the S3 Flow
