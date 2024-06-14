@@ -39,6 +39,12 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
+class ExtractConfig(BaseModel):
+    orig_file_id: str
+    msg_ix: int
+    file_split_id: typing.Optional[str] = None
+    target_size: typing.Optional[int] = None
+
 class SearchConfig(BaseModel):
     query_string: str
     max_num_results: int

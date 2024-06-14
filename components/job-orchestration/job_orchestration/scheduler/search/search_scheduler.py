@@ -41,7 +41,7 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus, SearchTaskStatus, SearchJobType
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import SearchConfig, ExtractConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, BaseJob, SearchTaskResult
 from job_orchestration.scheduler.search.reducer_handler import (
     handle_reducer_connection,
@@ -271,6 +271,28 @@ def get_archives_for_search(
     return archives_for_search
 
 
+@exception_default_value(default=[])
+def get_file_split_for_extraction(
+    db_conn,
+    extraction_config: ExtractConfig,
+):
+    query = f"""SELECT id as file_split_id, archive_id 
+            FROM {CLP_METADATA_TABLE_PREFIX}files
+            """
+    filter_clauses = []
+    filter_clauses.append(f"orig_file_id = '{extraction_config.orig_file_id}'")
+    filter_clauses.append(f"begin_message_ix <= {extraction_config.msg_ix}")
+    filter_clauses.append(f"(begin_message_ix + num_messages) > {extraction_config.msg_ix}")
+    if len(filter_clauses) > 0:
+        query += " WHERE " + " AND ".join(filter_clauses)
+
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query)
+        results = list(cursor.fetchall())
+
+    return results
+
+
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
@@ -386,14 +408,16 @@ def handle_pending_search_jobs(
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_search_jobs(db_conn):
             job_id = str(job["job_id"])
+            job_type = job["type"]
+            job_config = job["job_config"]
             logger.info(f"Pending job: {job_id}")
 
-            if SearchJobType.SEARCH == job["type"]:
+            if SearchJobType.SEARCH == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
                 if job_id in active_jobs:
                     continue
 
-                search_config = SearchConfig.parse_obj(msgpack.unpackb(job["job_config"]))
+                search_config = SearchConfig.parse_obj(msgpack.unpackb(job_config))
                 archives_for_search = get_archives_for_search(db_conn, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
@@ -406,7 +430,7 @@ def handle_pending_search_jobs(
                         num_tasks=0,
                         duration=0,
                     ):
-                        logger.info(f"No matching archives, skipping job {job['job_id']}.")
+                        logger.info(f"No matching archives, skipping job {job_id}.")
                     continue
 
                 new_search_job = SearchJob(
@@ -419,7 +443,7 @@ def handle_pending_search_jobs(
                 )
 
                 if search_config.aggregation_config is not None:
-                    new_search_job.search_config.aggregation_config.job_id = job["job_id"]
+                    new_search_job.search_config.aggregation_config.job_id = job_id
                     new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
                     new_search_job.reducer_acquisition_task = asyncio.create_task(
                         acquire_reducer_for_job(new_search_job)
@@ -428,13 +452,40 @@ def handle_pending_search_jobs(
                 else:
                     pending_jobs.append(new_search_job)
                 active_jobs[job_id] = new_search_job
-            else:
-                logger.error(f"Unexpected job type: {job['job_id']}.")
+            elif SearchJobType.EXTRACTIR == job_type:
+                extract_config = ExtractConfig.parse_obj(msgpack.unpackb(job_config))
+                results = get_file_split_for_extraction(db_conn, extract_config)
 
+                if len(results) == 0:
+                    logger.info(f"No matching file split")
+
+                elif len(results) > 1:
+                    logger.error(f"Unexpected number of results: {len(results)}")
+                else:
+                    archive_id = results[0]["archive_id"]
+                    file_split_id = results[0]["file_split_id"]
+                    logger.info(archive_id)
+                    logger.info(file_split_id)
+
+                if set_job_or_task_status(
+                        db_conn,
+                        SEARCH_JOBS_TABLE_NAME,
+                        job_id,
+                        SearchJobStatus.SUCCEEDED,
+                        SearchJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                ):
+                    logger.info(f"Skip extraction job: {job_id}.")
+                else:
+                    logger.error(f"Failed to setup succeed for job {job_id}")
+                continue
         for job in pending_jobs:
             job_id = job.id
+            job_type = job.type
             num_task: int
-            if SearchJobType.SEARCH == job.type:
+            if SearchJobType.SEARCH == job_type:
                 if (
                     job.search_config.network_address is None
                     and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
@@ -457,7 +508,7 @@ def handle_pending_search_jobs(
                 )
                 num_task = job.num_archives_to_search
             else:
-                logger.error(f"Unexpected job type: {job['job_id']}.")
+                logger.error(f"Unexpected job {job_id} type: {job_type}.")
 
             start_time = datetime.datetime.now()
             job.start_time = start_time
