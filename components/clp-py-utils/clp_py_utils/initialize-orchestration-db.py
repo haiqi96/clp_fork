@@ -96,13 +96,14 @@ def main(argv):
                 f"""
                 CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
+                    `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{SearchJobStatus.PENDING}',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `search_config` VARBINARY(60000) NOT NULL,
+                    `job_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC

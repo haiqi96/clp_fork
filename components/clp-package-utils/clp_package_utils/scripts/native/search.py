@@ -15,7 +15,7 @@ import msgpack
 import pymongo
 from clp_py_utils.clp_config import Database, ResultsCache, SEARCH_JOBS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.scheduler.constants import SearchJobStatus
+from job_orchestration.scheduler.constants import SearchJobStatus, SearchJobType
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 
 from clp_package_utils.general import (
@@ -111,8 +111,8 @@ def create_and_monitor_job_in_db(
     ) as db_cursor:
         # Create job
         db_cursor.execute(
-            f"INSERT INTO `{SEARCH_JOBS_TABLE_NAME}` (`search_config`) VALUES (%s)",
-            (msgpack.packb(search_config.dict()),),
+            f"INSERT INTO `{SEARCH_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
+            (msgpack.packb(search_config.dict()), SearchJobType.SEARCH,),
         )
         db_conn.commit()
         job_id = db_cursor.lastrowid

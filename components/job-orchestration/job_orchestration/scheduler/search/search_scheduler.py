@@ -40,9 +40,9 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
-from job_orchestration.scheduler.constants import SearchJobStatus, SearchTaskStatus
+from job_orchestration.scheduler.constants import SearchJobStatus, SearchTaskStatus, SearchJobType
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
+from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, BaseJob, SearchTaskResult
 from job_orchestration.scheduler.search.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -102,7 +102,8 @@ def fetch_new_search_jobs(db_conn) -> list:
         db_cursor.execute(
             f"""
             SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
-            {SEARCH_JOBS_TABLE_NAME}.search_config
+            {SEARCH_JOBS_TABLE_NAME}.job_config,
+            {SEARCH_JOBS_TABLE_NAME}.type
             FROM {SEARCH_JOBS_TABLE_NAME}
             WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
             """
@@ -222,7 +223,7 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 logger.error(f"Failed to cancel job {job_id}.")
 
 
-def insert_search_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[int]:
+def insert_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[int]:
     task_ids = []
     with contextlib.closing(db_conn.cursor()) as cursor:
         for archive_id in archive_ids:
@@ -273,18 +274,26 @@ def get_archives_for_search(
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
+    job_type: SearchJobType,
     job_id: str,
-    search_config: SearchConfig,
+    job_config, # BaseModel
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    search_config_obj = search_config.dict()
+    supported_celery_task = {
+        SearchJobType.SEARCH: search.s
+    }
+    if job_type not in supported_celery_task:
+        logger.error("NOT supported task")
+        exit(-1)
+
+    job_config_obj = job_config.dict()
     return celery.group(
         search.s(
             job_id=job_id,
             archive_id=archive_ids[i],
             task_id=task_ids[i],
-            search_config_obj=search_config_obj,
+            search_config_obj=job_config_obj,
             clp_metadata_db_conn_params=clp_metadata_db_conn_params,
             results_cache_uri=results_cache_uri,
         )
@@ -292,20 +301,20 @@ def get_task_group_for_job(
     )
 
 
-def dispatch_search_job(
+def dispatch_job(
     db_conn,
     job: SearchJob,
-    archives_for_search: List[Dict[str, any]],
+    target_archives: List[Dict[str, any]],
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ) -> None:
-    global active_jobs
-    archive_ids = [archive["archive_id"] for archive in archives_for_search]
-    task_ids = insert_search_tasks_into_db(db_conn, job.id, archive_ids)
+    archive_ids = [archive["archive_id"] for archive in target_archives]
+    task_ids = insert_tasks_into_db(db_conn, job.id, archive_ids)
 
     task_group = get_task_group_for_job(
         archive_ids,
         task_ids,
+        job.type,
         job.id,
         job.search_config,
         clp_metadata_db_conn_params,
@@ -371,76 +380,85 @@ def handle_pending_search_jobs(
     reducer_acquisition_tasks = []
 
     pending_jobs = [
-        job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state
+        job for job in active_jobs.values() if SearchJobType.SEARCH == job.type and InternalJobState.WAITING_FOR_DISPATCH == job.state
     ]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_search_jobs(db_conn):
             job_id = str(job["job_id"])
+            logger.info(f"Pending job: {job_id}")
 
-            # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-            if job_id in active_jobs:
-                continue
+            if SearchJobType.SEARCH == job["type"]:
+                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+                if job_id in active_jobs:
+                    continue
 
-            search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
-            archives_for_search = get_archives_for_search(db_conn, search_config)
-            if len(archives_for_search) == 0:
-                if set_job_or_task_status(
-                    db_conn,
-                    SEARCH_JOBS_TABLE_NAME,
-                    job_id,
-                    SearchJobStatus.SUCCEEDED,
-                    SearchJobStatus.PENDING,
-                    start_time=datetime.datetime.now(),
-                    num_tasks=0,
-                    duration=0,
-                ):
-                    logger.info(f"No matching archives, skipping job {job['job_id']}.")
-                continue
+                search_config = SearchConfig.parse_obj(msgpack.unpackb(job["job_config"]))
+                archives_for_search = get_archives_for_search(db_conn, search_config)
+                if len(archives_for_search) == 0:
+                    if set_job_or_task_status(
+                        db_conn,
+                        SEARCH_JOBS_TABLE_NAME,
+                        job_id,
+                        SearchJobStatus.SUCCEEDED,
+                        SearchJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.info(f"No matching archives, skipping job {job['job_id']}.")
+                    continue
 
-            new_search_job = SearchJob(
-                id=job_id,
-                search_config=search_config,
-                state=InternalJobState.WAITING_FOR_DISPATCH,
-                num_archives_to_search=len(archives_for_search),
-                num_archives_searched=0,
-                remaining_archives_for_search=archives_for_search,
-            )
-
-            if search_config.aggregation_config is not None:
-                new_search_job.search_config.aggregation_config.job_id = job["job_id"]
-                new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
-                new_search_job.reducer_acquisition_task = asyncio.create_task(
-                    acquire_reducer_for_job(new_search_job)
+                new_search_job = SearchJob(
+                    id=job_id,
+                    search_config=search_config,
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
+                    num_archives_to_search=len(archives_for_search),
+                    num_archives_searched=0,
+                    remaining_archives_for_search=archives_for_search,
                 )
-                reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+
+                if search_config.aggregation_config is not None:
+                    new_search_job.search_config.aggregation_config.job_id = job["job_id"]
+                    new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+                    new_search_job.reducer_acquisition_task = asyncio.create_task(
+                        acquire_reducer_for_job(new_search_job)
+                    )
+                    reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+                else:
+                    pending_jobs.append(new_search_job)
+                active_jobs[job_id] = new_search_job
             else:
-                pending_jobs.append(new_search_job)
-            active_jobs[job_id] = new_search_job
+                logger.error(f"Unexpected job type: {job['job_id']}.")
 
         for job in pending_jobs:
             job_id = job.id
+            num_task: int
+            if SearchJobType.SEARCH == job.type:
+                if (
+                    job.search_config.network_address is None
+                    and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
+                ):
+                    archives_for_search = job.remaining_archives_for_search[
+                        :num_archives_to_search_per_sub_job
+                    ]
+                    job.remaining_archives_for_search = job.remaining_archives_for_search[
+                        num_archives_to_search_per_sub_job:
+                    ]
+                else:
+                    archives_for_search = job.remaining_archives_for_search
+                    job.remaining_archives_for_search = []
 
-            if (
-                job.search_config.network_address is None
-                and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
-            ):
-                archives_for_search = job.remaining_archives_for_search[
-                    :num_archives_to_search_per_sub_job
-                ]
-                job.remaining_archives_for_search = job.remaining_archives_for_search[
-                    num_archives_to_search_per_sub_job:
-                ]
+                dispatch_job(
+                    db_conn, job, archives_for_search, clp_metadata_db_conn_params, results_cache_uri
+                )
+                logger.info(
+                    f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
+                )
+                num_task = job.num_archives_to_search
             else:
-                archives_for_search = job.remaining_archives_for_search
-                job.remaining_archives_for_search = []
+                logger.error(f"Unexpected job type: {job['job_id']}.")
 
-            dispatch_search_job(
-                db_conn, job, archives_for_search, clp_metadata_db_conn_params, results_cache_uri
-            )
-            logger.info(
-                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
-            )
             start_time = datetime.datetime.now()
             job.start_time = start_time
             set_job_or_task_status(
@@ -450,7 +468,7 @@ def handle_pending_search_jobs(
                 SearchJobStatus.RUNNING,
                 SearchJobStatus.PENDING,
                 start_time=start_time,
-                num_tasks=job.num_archives_to_search,
+                num_tasks=num_task,
             )
 
     return reducer_acquisition_tasks

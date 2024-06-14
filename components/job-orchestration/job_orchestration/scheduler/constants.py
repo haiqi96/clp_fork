@@ -32,6 +32,11 @@ class CompressionTaskStatus(IntEnum):
 
 # When adding new states always add them to the end of this enum
 # and make necessary changes in the UI, Search Scheduler, and Reducer
+class SearchJobType(IntEnum):
+    SEARCH = 0
+    EXTRACTIR = auto()
+    INVALID = auto()
+
 class SearchJobStatus(IntEnum):
     PENDING = 0
     RUNNING = auto()
