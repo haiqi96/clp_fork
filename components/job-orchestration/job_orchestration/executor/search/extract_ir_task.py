@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import Database, SEARCH_TASKS_TABLE_NAME, StorageEn
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.celery import app
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import ExtractConfig
 from job_orchestration.scheduler.scheduler_data import SearchTaskResult, SearchTaskStatus
 
 # Setup logging
@@ -41,75 +41,16 @@ def make_command(
     clp_home: Path,
     archives_dir: Path,
     archive_id: str,
-    search_config: SearchConfig,
+    extract_config: ExtractConfig,
     results_cache_uri: str,
     results_collection: str,
 ):
-    if StorageEngine.CLP == storage_engine:
-        command = [str(clp_home / "bin" / "clo"), str(archives_dir / archive_id)]
-        if search_config.path_filter is not None:
-            command.append("--file-path")
-            command.append(search_config.path_filter)
-    elif StorageEngine.CLP_S == storage_engine:
-        command = [
-            str(clp_home / "bin" / "clp-s"),
-            "s",
-            str(archives_dir),
-            "--archive-id",
-            archive_id,
-        ]
-    else:
-        raise ValueError(f"Unsupported storage engine {storage_engine}")
-
-    command.append(search_config.query_string)
-    if search_config.begin_timestamp is not None:
-        command.append("--tge")
-        command.append(str(search_config.begin_timestamp))
-    if search_config.end_timestamp is not None:
-        command.append("--tle")
-        command.append(str(search_config.end_timestamp))
-    if search_config.ignore_case:
-        command.append("--ignore-case")
-
-    if search_config.aggregation_config is not None:
-        aggregation_config = search_config.aggregation_config
-        if aggregation_config.do_count_aggregation is not None:
-            command.append("--count")
-        if aggregation_config.count_by_time_bucket_size is not None:
-            command.append("--count-by-time")
-            command.append(str(aggregation_config.count_by_time_bucket_size))
-
-        # fmt: off
-        command.extend((
-            "reducer",
-            "--host", aggregation_config.reducer_host,
-            "--port", str(aggregation_config.reducer_port),
-            "--job-id", str(aggregation_config.job_id)
-        ))
-        # fmt: on
-    elif search_config.network_address is not None:
-        # fmt: off
-        command.extend((
-            "network",
-            "--host", search_config.network_address[0],
-            "--port", str(search_config.network_address[1])
-        ))
-        # fmt: on
-    else:
-        # fmt: off
-        command.extend((
-            "results-cache",
-            "--uri", results_cache_uri,
-            "--collection", results_collection,
-            "--max-num-results", str(search_config.max_num_results)
-        ))
-        # fmt: on
-
+    command = ["echo", "helloworld"]
     return command
 
 
 @app.task(bind=True)
-def search(
+def extract(
     self: Task,
     job_id: str,
     task_id: int,
@@ -133,7 +74,7 @@ def search(
 
     logger.info(f"Started task for job {job_id}")
 
-    search_config = SearchConfig.parse_obj(job_config_obj)
+    extract_config = ExtractConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
@@ -142,12 +83,12 @@ def search(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         try:
-            search_command = make_command(
+            extract_command = make_command(
                 storage_engine=clp_storage_engine,
                 clp_home=clp_home,
                 archives_dir=archive_directory,
                 archive_id=archive_id,
-                search_config=search_config,
+                extract_config=extract_config,
                 results_cache_uri=results_cache_uri,
                 results_collection=job_id,
             )
@@ -168,7 +109,7 @@ def search(
                 task_id=task_id,
                 status=SearchTaskStatus.FAILED,
                 duration=0,
-                error_log_path=clo_log_path,
+                error_log_path=str(clo_log_path),
             ).dict()
 
         update_search_task_metadata(
@@ -176,9 +117,9 @@ def search(
         )
         db_conn.commit()
 
-    logger.info(f'Running: {" ".join(search_command)}')
+    logger.info(f'Running: {" ".join(extract_command)}')
     search_proc = subprocess.Popen(
-        search_command,
+        extract_command,
         preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=clo_log_file,
@@ -200,17 +141,17 @@ def search(
     # Register the function to kill the child process at exit
     signal.signal(signal.SIGTERM, sigterm_handler)
 
-    logger.info("Waiting for search to finish")
+    logger.info("Waiting for extraction to finish")
     # communicate is equivalent to wait in this case, but avoids deadlocks if we switch to piping
     # stdout/stderr in the future.
     search_proc.communicate()
     return_code = search_proc.returncode
     if 0 != return_code:
         search_status = SearchTaskStatus.FAILED
-        logger.error(f"Failed search task for job {job_id} - return_code={return_code}")
+        logger.error(f"Failed extraction task for job {job_id} - return_code={return_code}")
     else:
         search_status = SearchTaskStatus.SUCCEEDED
-        logger.info(f"Search task completed for job {job_id}")
+        logger.info(f"Extract task completed for job {job_id}")
 
     # Close log files
     clo_log_file.close()
@@ -231,6 +172,6 @@ def search(
     )
 
     if SearchTaskStatus.FAILED == search_status:
-        search_task_result.error_log_path = clo_log_path
+        search_task_result.error_log_path = str(clo_log_path)
 
     return search_task_result.dict()

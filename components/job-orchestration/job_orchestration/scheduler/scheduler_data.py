@@ -4,7 +4,7 @@ from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus, SearchTaskStatus, SearchJobType
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import SearchConfig, ExtractConfig
 from job_orchestration.scheduler.search.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
@@ -30,6 +30,7 @@ class CompressionTaskResult(BaseModel):
 
 
 class InternalJobState(Enum):
+    PENDING = auto()
     WAITING_FOR_REDUCER = auto()
     WAITING_FOR_DISPATCH = auto()
     RUNNING = auto()
@@ -40,8 +41,19 @@ class BaseJob(BaseModel):
     current_sub_job_async_task_result: Optional[Any]
     type: SearchJobType = SearchJobType.INVALID
 
+class ExtractJob(BaseJob):
+    job_config: ExtractConfig
+    state: InternalJobState
+    archive_id: str
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.type = SearchJobType.EXTRACTIR
+
+    class Config:  # To allow asyncio.Task and asyncio.Queue
+        arbitrary_types_allowed = True
+
 class SearchJob(BaseJob):
-    search_config: SearchConfig
+    job_config: SearchConfig
     state: InternalJobState
     num_archives_to_search: int
     num_archives_searched: int
@@ -55,7 +67,6 @@ class SearchJob(BaseJob):
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True
-
 
 class SearchTaskResult(BaseModel):
     status: SearchTaskStatus
