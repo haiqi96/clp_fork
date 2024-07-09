@@ -15,6 +15,10 @@ import exampleRoutes from "./routes/examples.js";
  * @param {import("fastify").FastifyServerOptions} options.fastifyOptions - The Fastify server options.
  * @param {string} options.dbPass - The MySQL database password.
  * @param {string} options.dbUser - The MySQL database user.
+ * @param {string} options.MySQLHost - The MySQL database host.
+ * @param {number} options.MySQLPort - The MySQL database port.
+ * @param {string} options.mongodbHost - The MongoDB database host.
+ * @param {number} options.mongodbPort - The MongoDb database port.
  * @param {string} options.clientDir Absolute path to the client directory to serve when in running in a
  * production environment.
  * @return {Promise<import("fastify").FastifyInstance>}
@@ -37,16 +41,16 @@ const app = async (options = {}) => {
     await server.register(exampleRoutes);
     await server.register(DbManager, {
         mysqlConfig: {
-            host: "127.0.0.1",
+            host: options.MySQLHost,
             database: "clp-db",
             user: options.dbUser,
             password: options.dbPass,
-            port: 3306,
+            port: Number(options.MySQLPort),
             queryJobsTableName: "query_jobs",
         },
         mongoConfig: {
-            host: "127.0.0.1",
-            port: 27017,
+            host: options.mongodbHost,
+            port: Number(options.mongodbPort),
             database: "clp-search",
             statsCollectionName: "stats",
         },

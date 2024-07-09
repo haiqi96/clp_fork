@@ -77,9 +77,10 @@ class DbManager {
      */
     async insertDecompressionJob(jobConfig) {
         return await this.mysqlConnection.query(
-            `INSERT INTO ${this.queryJobsTableName} (id, job_config)
+            `INSERT INTO ${this.queryJobsTableName} (type, job_config)
              VALUES (?, ?)`,
             [
+                // The value here should align with job_orchestration/scheduler/constants.py
                 1,
                 Buffer.from(msgpack.encode(jobConfig)),
             ]

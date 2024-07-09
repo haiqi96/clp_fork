@@ -26,6 +26,10 @@ const main = async () => {
         clientDir: path.resolve(envVars.CLIENT_DIR),
         dbUser: envVars.CLP_DB_USER,
         dbPass: envVars.CLP_DB_PASS,
+        MySQLPort: envVars.CLP_DB_PORT,
+        MySQLHOST: envVars.CLP_DB_HOST,
+        mongodbHost: envVars.RESULTS_CACHE_HOST,
+        mongodbPort: envVars.RESULTS_CACHE_PORT
     });
 
     try {

@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {{HOST: string, PORT: string, CLP_DB_USER: string, CLP_DB_PASS: string}}
+ * @return {{HOST: string, PORT: string, CLP_DB_USER: string, CLP_DB_PASS: string, CLP_DB_PORT: string, CLP_DB_HOST: string, RESULTS_CACHE_HOST: string, RESULTS_CACHE_PORT: string}}
  * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
@@ -13,10 +13,10 @@ const parseEnvVars = () => {
     });
 
     const {
-        HOST, PORT, CLP_DB_USER, CLP_DB_PASS
+        HOST, PORT, CLP_DB_USER, CLP_DB_PASS, CLP_DB_PORT, CLP_DB_HOST, RESULTS_CACHE_HOST, RESULTS_CACHE_PORT
     } = process.env;
     const envVars = {
-        HOST, PORT, CLP_DB_USER, CLP_DB_PASS
+        HOST, PORT, CLP_DB_USER, CLP_DB_PASS, CLP_DB_PORT, CLP_DB_HOST, RESULTS_CACHE_HOST, RESULTS_CACHE_PORT
     };
 
     // Check for mandatory environment variables
