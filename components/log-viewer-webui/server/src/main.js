@@ -1,37 +1,8 @@
-import dotenv from "dotenv";
 import * as path from "node:path";
 import process from "node:process";
 
 import app from "./app.js";
-
-
-/**
- * Parses environment variables into config values for the application.
- *
- * @return {{CLIENT_DIR: string, HOST: string, PORT: string}}
- * @throws {Error} if any required environment variable is undefined.
- */
-const parseEnvVars = () => {
-    dotenv.config({
-        path: ".env",
-    });
-
-    const {
-        CLIENT_DIR, HOST, PORT,
-    } = process.env;
-    const envVars = {
-        CLIENT_DIR, HOST, PORT,
-    };
-
-    // Check for mandatory environment variables
-    for (const [key, value] of Object.entries(envVars)) {
-        if ("undefined" === typeof value) {
-            throw new Error(`Environment variable ${key} must be defined.`);
-        }
-    }
-
-    return envVars;
-};
+import {parseEnvVars} from "./utils.js";
 
 /**
  * Sets up and runs the server.
@@ -48,8 +19,13 @@ const main = async () => {
     };
 
     const envVars = parseEnvVars();
-    const server = await app(path.resolve(envVars.CLIENT_DIR), {
-        logger: envToLogger[process.env.NODE_ENV] ?? true,
+    const server = await app({
+        fastifyOptions: {
+            logger: envToLogger[process.env.NODE_ENV] ?? true
+        },
+        clientDir: path.resolve(envVars.CLIENT_DIR),
+        dbUser: envVars.CLP_DB_USER,
+        dbPass: envVars.CLP_DB_PASS,
     });
 
     try {
