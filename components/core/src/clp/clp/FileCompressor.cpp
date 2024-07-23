@@ -165,16 +165,16 @@ bool FileCompressor::compress_file(
             );
         }
         NetworkReader network_reader(presigned_url);
-                parse_and_encode(
-                        target_data_size_of_dicts,
-                        archive_user_config,
-                        target_encoded_file_size,
-                        file_to_compress.get_path_for_compression(),
-                        file_to_compress.get_group_id(),
-                        archive_writer,
-                        network_reader,
-                        use_heuristic
-                );
+        parse_and_encode(
+                target_data_size_of_dicts,
+                archive_user_config,
+                target_encoded_file_size,
+                file_to_compress.get_path_for_compression(),
+                file_to_compress.get_group_id(),
+                archive_writer,
+                network_reader,
+                use_heuristic
+        );
     } else if (CommandLineArguments::InputSource::Filesystem == m_input_source) {
         Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
         );
