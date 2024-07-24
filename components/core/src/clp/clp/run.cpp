@@ -5,6 +5,7 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include "../aws/AwsAuthenticationSigner.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
@@ -12,13 +13,12 @@
 #include "compression.hpp"
 #include "decompression.hpp"
 #include "utils.hpp"
-#include "../aws/AwsAuthenticationSigner.hpp"
 
+using clp::aws::AwsAuthenticationSigner;
+using clp::aws::S3Url;
 using std::string;
 using std::unordered_set;
 using std::vector;
-using clp::aws::AwsAuthenticationSigner;
-using clp::aws::S3Url;
 
 namespace clp::clp {
 int run(int argc, char const* argv[]) {
@@ -86,8 +86,10 @@ int run(int argc, char const* argv[]) {
                 try {
                     S3Url const s3_url{input_path};
                     string presigned_url{};
-                    if (auto error_code = aws_auth_signer.generate_presigned_url(s3_url, presigned_url);
-                        ErrorCode_Success != error_code) {
+                    if (auto error_code
+                        = aws_auth_signer.generate_presigned_url(s3_url, presigned_url);
+                        ErrorCode_Success != error_code)
+                    {
                         SPDLOG_ERROR("Failed to generate s3 presigned url, error: {}", error_code);
                         return -1;
                     }
