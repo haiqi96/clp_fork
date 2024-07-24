@@ -12,10 +12,13 @@
 #include "compression.hpp"
 #include "decompression.hpp"
 #include "utils.hpp"
+#include "../aws/AwsAuthenticationSigner.hpp"
 
 using std::string;
 using std::unordered_set;
 using std::vector;
+using clp::aws::AwsAuthenticationSigner;
+using clp::aws::S3Url;
 
 namespace clp::clp {
 int run(int argc, char const* argv[]) {
@@ -68,8 +71,33 @@ int run(int argc, char const* argv[]) {
         vector<FileToCompress> grouped_files_to_compress;
         vector<string> empty_directory_paths;
         if (CommandLineArguments::InputSource::S3 == command_line_args.get_input_source()) {
+            string const access_key_id{getenv("AWS_ACCESS_KEY_ID")};
+            string const secret_access_key{getenv("AWS_SECRET_ACCESS_KEY")};
+            if (access_key_id.empty()) {
+                SPDLOG_ERROR("AWS_ACCESS_KEY_ID environment variable is not set");
+                return -1;
+            }
+            if (secret_access_key.empty()) {
+                SPDLOG_ERROR("AWS_SECRET_ACCESS_KEY environment variable is not set");
+                return -1;
+            }
+            AwsAuthenticationSigner aws_auth_signer{access_key_id, secret_access_key};
             for (auto const& input_path : input_paths) {
-                files_to_compress.emplace_back(input_path, input_path, 0);
+                try {
+                    S3Url const s3_url{input_path};
+                    string presigned_url{};
+                    if (auto error_code = aws_auth_signer.generate_presigned_url(s3_url, presigned_url);
+                        ErrorCode_Success != error_code) {
+                        SPDLOG_ERROR("Failed to generate s3 presigned url, error: {}", error_code);
+                        return -1;
+                    }
+                    files_to_compress.emplace_back(presigned_url, s3_url.get_compression_path(), 0);
+                    std::cout << presigned_url << std::endl;
+                    std::cout << s3_url.get_compression_path() << std::endl;
+                } catch (S3Url::OperationFailed const& err) {
+                    SPDLOG_ERROR(err.what());
+                    return -1;
+                }
             }
         } else if ((CommandLineArguments::InputSource::Filesystem
                     == command_line_args.get_input_source()))

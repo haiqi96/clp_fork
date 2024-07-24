@@ -168,7 +168,6 @@ private:
     BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;
     LibarchiveFileReader m_libarchive_file_reader;
-    std::optional<aws::AwsAuthenticationSigner> m_aws_auth_signer;
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
     std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;

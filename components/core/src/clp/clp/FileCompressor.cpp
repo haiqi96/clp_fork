@@ -118,18 +118,8 @@ FileCompressor::FileCompressor(
           m_reader_parser(std::move(reader_parser)) {
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
         if (ErrorCode_Success != NetworkReader::init()) {
-            SPDLOG_ERROR("Failed to initialize streaming reader");
             throw std::runtime_error("Failed to initialize streaming reader");
         }
-        string const access_key_id{getenv("AWS_ACCESS_KEY_ID")};
-        string const secret_access_key{getenv("AWS_SECRET_ACCESS_KEY")};
-        if (access_key_id.empty()) {
-            throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
-        }
-        if (secret_access_key.empty()) {
-            throw std::invalid_argument("AWS_SECRET_ACCESS_KEY environment variable is not set");
-        }
-        m_aws_auth_signer.emplace(access_key_id, secret_access_key);
     }
 }
 
@@ -150,21 +140,7 @@ bool FileCompressor::compress_file(
     bool succeeded = true;
     std::string file_name;
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
-        aws::S3Url s3_url(file_to_compress.get_path());
-        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
-        );
-        string presigned_url;
-        if (auto error_code
-            = m_aws_auth_signer.value().generate_presigned_url(s3_url, presigned_url);
-            ErrorCode_Success != error_code)
-        {
-            SPDLOG_ERROR(
-                    "Failed to generate presigned url for {}, errno={}",
-                    s3_url.get_path(),
-                    error_code
-            );
-        }
-        NetworkReader network_reader(presigned_url);
+        NetworkReader network_reader(file_to_compress.get_path());
         parse_and_encode(
                 target_data_size_of_dicts,
                 archive_user_config,

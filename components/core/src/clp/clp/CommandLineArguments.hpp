@@ -72,7 +72,7 @@ public:
 
     std::string const& get_archives_dir() const { return m_archives_dir; }
 
-    InputSource get_input_source() const { return m_input_source; }
+    auto get_input_source() const -> InputSource { return m_input_source; }
 
     std::vector<std::string> const& get_input_paths() const { return m_input_paths; }
 

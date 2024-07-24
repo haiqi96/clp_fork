@@ -82,6 +82,8 @@ set(
         ../MySQLParamBindings.hpp
         ../MySQLPreparedStatement.cpp
         ../MySQLPreparedStatement.hpp
+        ../NetworkReader.cpp
+        ../NetworkReader.hpp
         ../PageAllocatedVector.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
@@ -136,8 +138,6 @@ set(
         ../streaming_compression/zstd/Constants.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
-        ../NetworkReader.cpp
-        ../NetworkReader.hpp
         ../StringReader.cpp
         ../StringReader.hpp
         ../Thread.cpp
