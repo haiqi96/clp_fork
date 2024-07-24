@@ -138,7 +138,6 @@ bool FileCompressor::compress_file(
         bool use_heuristic
 ) {
     bool succeeded = true;
-    std::string file_name;
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
         NetworkReader network_reader(file_to_compress.get_path());
         parse_and_encode(
@@ -211,7 +210,6 @@ bool FileCompressor::compress_file(
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
-    PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
     return succeeded;
 }
