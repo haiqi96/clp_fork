@@ -1,10 +1,20 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
+        ../aws/AwsAuthenticationSigner.cpp
+        ../aws/AwsAuthenticationSigner.hpp
+        ../aws/constants.hpp
         ../BufferedFileReader.cpp
         ../BufferedFileReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
+        ../CurlDownloadHandler.cpp
+        ../CurlDownloadHandler.hpp
+        ../CurlEasyHandle.hpp
+        ../CurlGlobalInstance.cpp
+        ../CurlGlobalInstance.hpp
+        ../CurlOperationFailed.hpp
+        ../CurlStringList.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
@@ -38,6 +48,8 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../hash_utils.cpp
+        ../hash_utils.hpp
         ../ir/constants.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
@@ -72,6 +84,8 @@ set(
         ../MySQLParamBindings.hpp
         ../MySQLPreparedStatement.cpp
         ../MySQLPreparedStatement.hpp
+        ../NetworkReader.cpp
+        ../NetworkReader.hpp
         ../PageAllocatedVector.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
@@ -128,6 +142,8 @@ set(
         ../streaming_compression/zstd/Decompressor.hpp
         ../StringReader.cpp
         ../StringReader.hpp
+        ../Thread.cpp
+        ../Thread.hpp
         ../time_types.hpp
         ../TimestampPattern.cpp
         ../TimestampPattern.hpp
@@ -170,12 +186,14 @@ target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        ${CURL_LIBRARIES}
         fmt::fmt
         log_surgeon::log_surgeon
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        OpenSSL::Crypto
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp::yaml-cpp

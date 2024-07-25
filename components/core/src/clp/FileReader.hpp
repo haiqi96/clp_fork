@@ -29,6 +29,8 @@ public:
 
     ~FileReader();
 
+    // TODO: implement a move operator
+
     // Methods implementing the ReaderInterface
     /**
      * Tries to get the current position of the read head in the file

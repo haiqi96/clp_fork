@@ -32,8 +32,10 @@ using log_surgeon::Reader;
 using log_surgeon::ReaderParser;
 using std::cout;
 using std::endl;
+using std::make_unique;
 using std::set;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 // Local prototypes
@@ -116,16 +118,24 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
-    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-
-    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+    std::string file_name{};
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-
-    FileReader file_reader{file_to_compress.get_path()};
-    BufferedFileReader buffered_file_reader{file_reader};
-
+    bool succeeded = true;
+    unique_ptr<BufferedFileReader> buffered_file_reader;
+    unique_ptr<NetworkReader> network_reader;
+    unique_ptr<FileReader> file_reader;
+    if (CommandLineArguments::InputSource::S3 == m_input_source) {
+        file_name = file_to_compress.get_path();
+        network_reader = make_unique<NetworkReader>(file_to_compress.get_path());
+        buffered_file_reader = make_unique<BufferedFileReader>(*network_reader);
+    } else if (CommandLineArguments::InputSource::Filesystem == m_input_source) {
+        file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+        file_reader = make_unique<FileReader>(file_to_compress.get_path());
+        buffered_file_reader = make_unique<BufferedFileReader>(*file_reader);
+    }
     // Check that file is UTF-8 encoded
-    if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();
+    if (auto error_code = buffered_file_reader->try_refill_buffer_if_empty();
         ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
     {
         if (ErrorCode_errno == error_code) {
@@ -145,8 +155,7 @@ bool FileCompressor::compress_file(
     }
     char const* utf8_validation_buf{nullptr};
     size_t peek_size{0};
-    buffered_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
-    bool succeeded = true;
+    buffered_file_reader->peek_buffered_data(utf8_validation_buf, peek_size);
     auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
     if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
         parse_and_encode(
@@ -156,7 +165,7 @@ bool FileCompressor::compress_file(
                 file_to_compress.get_path_for_compression(),
                 file_to_compress.get_group_id(),
                 archive_writer,
-                buffered_file_reader,
+                *buffered_file_reader,
                 use_heuristic
         );
     } else {
@@ -167,14 +176,13 @@ bool FileCompressor::compress_file(
                     target_encoded_file_size,
                     file_to_compress,
                     archive_writer,
-                    buffered_file_reader,
+                    *buffered_file_reader,
                     use_heuristic
             ))
         {
             succeeded = false;
         }
     }
-
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
     PROFILER_SPDLOG_INFO("Done parsing {}", file_name)

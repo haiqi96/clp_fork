@@ -12,8 +12,11 @@
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
+#include "../NetworkReader.hpp"
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
+#include "aws/AwsAuthenticationSigner.hpp"
+#include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
@@ -24,11 +27,13 @@ class FileCompressor {
 public:
     // Constructors
     FileCompressor(
+            CommandLineArguments::InputSource input_source,
             boost::uuids::random_generator& uuid_generator,
             std::unique_ptr<log_surgeon::ReaderParser> reader_parser
     )
-            : m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {}
+            : m_input_source(input_source),
+              m_uuid_generator(uuid_generator),
+              m_reader_parser(std::move(reader_parser)) {};
 
     // Methods
     /**
@@ -55,14 +60,14 @@ private:
 
     // Methods
     auto parse_and_encode(
-        size_t target_data_size_of_dicts,
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        size_t target_encoded_file_size,
-        std::string const& path_for_compression,
-        group_id_t group_id,
-        streaming_archive::writer::Archive& archive_writer,
-        ReaderInterface& reader,
-        bool use_heuristic
+            size_t target_data_size_of_dicts,
+            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+            size_t target_encoded_file_size,
+            std::string const& path_for_compression,
+            group_id_t group_id,
+            streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& reader,
+            bool use_heuristic
     ) -> void;
 
     /**
@@ -161,6 +166,7 @@ private:
     );
 
     // Variables
+    CommandLineArguments::InputSource m_input_source;
     boost::uuids::random_generator& m_uuid_generator;
     LibarchiveReader m_libarchive_reader;
     LibarchiveFileReader m_libarchive_file_reader;

@@ -273,6 +273,9 @@ set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
         src/clp/BufferReader.hpp
+        src/clp/aws/AwsAuthenticationSigner.cpp
+        src/clp/aws/AwsAuthenticationSigner.hpp
+        src/clp/aws/constants.hpp
         src/clp/clp/CommandLineArguments.cpp
         src/clp/clp/CommandLineArguments.hpp
         src/clp/clp/compression.cpp
