@@ -5,6 +5,8 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include "../aws/AwsAuthenticationSigner.hpp"
+#include "../CurlGlobalInstance.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
@@ -13,11 +15,17 @@
 #include "decompression.hpp"
 #include "utils.hpp"
 
+using clp::aws::AwsAuthenticationSigner;
+using clp::aws::S3Url;
 using std::string;
 using std::unordered_set;
 using std::vector;
 
 namespace clp::clp {
+[[nodiscard]] auto get_compression_path(S3Url const& s3_url) -> string {
+    return fmt::format("/{}/{}{}", s3_url.get_region(), s3_url.get_bucket(), s3_url.get_path());
+}
+
 int run(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -63,37 +71,72 @@ int run(int argc, char const* argv[]) {
             reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
         }
 
-        boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove()
-        );
-
-        // Validate input paths exist
-        if (false == validate_paths_exist(input_paths)) {
-            return -1;
-        }
-
         // Get paths of all files we need to compress
         vector<FileToCompress> files_to_compress;
+        vector<FileToCompress> grouped_files_to_compress;
         vector<string> empty_directory_paths;
-        for (auto const& input_path : input_paths) {
-            if (false
-                == find_all_files_and_empty_directories(
-                        path_prefix_to_remove,
-                        input_path,
-                        files_to_compress,
-                        empty_directory_paths
-                ))
-            {
+        // Todo: Consider to turn this into a unique_ptr?
+        CurlGlobalInstance const curl_global_instance;
+        if (CommandLineArguments::InputSource::S3 == command_line_args.get_input_source()) {
+            string const access_key_id{getenv("AWS_ACCESS_KEY_ID")};
+            string const secret_access_key{getenv("AWS_SECRET_ACCESS_KEY")};
+            if (access_key_id.empty()) {
+                SPDLOG_ERROR("AWS_ACCESS_KEY_ID environment variable is not set");
                 return -1;
             }
-        }
-
-        vector<FileToCompress> grouped_files_to_compress;
-
-        if (files_to_compress.empty() && empty_directory_paths.empty()
-            && grouped_files_to_compress.empty())
+            if (secret_access_key.empty()) {
+                SPDLOG_ERROR("AWS_SECRET_ACCESS_KEY environment variable is not set");
+                return -1;
+            }
+            AwsAuthenticationSigner aws_auth_signer{access_key_id, secret_access_key};
+            for (auto const& input_path : input_paths) {
+                try {
+                    S3Url const s3_url{input_path};
+                    string presigned_url{};
+                    if (auto error_code
+                        = aws_auth_signer.generate_presigned_url(s3_url, presigned_url);
+                        ErrorCode_Success != error_code)
+                    {
+                        SPDLOG_ERROR("Failed to generate s3 presigned url, error: {}", error_code);
+                        return -1;
+                    }
+                    files_to_compress.emplace_back(presigned_url, get_compression_path(s3_url), 0);
+                } catch (S3Url::OperationFailed const& err) {
+                    SPDLOG_ERROR(err.what());
+                    return -1;
+                }
+            }
+        } else if ((CommandLineArguments::InputSource::Filesystem
+                    == command_line_args.get_input_source()))
         {
-            SPDLOG_ERROR("No files/directories to compress.");
-            return -1;
+            boost::filesystem::path path_prefix_to_remove(
+                    command_line_args.get_path_prefix_to_remove()
+            );
+
+            // Validate input paths exist
+            if (false == validate_paths_exist(input_paths)) {
+                return -1;
+            }
+
+            for (auto const& input_path : input_paths) {
+                if (false
+                    == find_all_files_and_empty_directories(
+                            path_prefix_to_remove,
+                            input_path,
+                            files_to_compress,
+                            empty_directory_paths
+                    ))
+                {
+                    return -1;
+                }
+            }
+
+            if (files_to_compress.empty() && empty_directory_paths.empty()
+                && grouped_files_to_compress.empty())
+            {
+                SPDLOG_ERROR("No files/directories to compress.");
+                return -1;
+            }
         }
 
         bool compression_successful;
