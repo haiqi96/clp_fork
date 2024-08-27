@@ -1,14 +1,22 @@
 #include "BufferedFileReader.hpp"
 
-#include <fcntl.h>
-
+#include <algorithm>
 #include <cerrno>
+#include <cstddef>
+#include <memory>
+#include <span>
+#include <string>
+#include <utility>
 
-#include <boost/filesystem.hpp>
-
+#include "BufferReader.hpp"
+#include "ErrorCode.hpp"
 #include "math_utils.hpp"
+#include "ReaderInterface.hpp"
 
+using std::make_unique;
+using std::span;
 using std::string;
+using std::unique_ptr;
 
 namespace clp {
 namespace {
@@ -23,20 +31,20 @@ namespace {
  * @return ErrorCode_Success on success
  */
 auto read_into_buffer(
-        ReaderInterface& reader,
+        ReaderInterface* reader,
         char* buf,
         size_t num_bytes_to_read,
         size_t& num_bytes_read
 ) -> ErrorCode;
 
 auto read_into_buffer(
-        ReaderInterface& reader,
+        ReaderInterface* reader,
         char* buf,
         size_t num_bytes_to_read,
         size_t& num_bytes_read
 ) -> ErrorCode {
     num_bytes_read = 0;
-    auto const error_code = reader.try_read(buf, num_bytes_to_read, num_bytes_read);
+    auto const error_code = reader->try_read(buf, num_bytes_to_read, num_bytes_read);
     if (0 == num_bytes_read) {
         return ErrorCode_EndOfFile;
     }
@@ -44,21 +52,20 @@ auto read_into_buffer(
 }
 }  // namespace
 
-BufferedFileReader::BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size)
-        : m_file_reader{reader_interface} {
+BufferedFileReader::BufferedFileReader(
+        std::unique_ptr<ReaderInterface> reader_interface,
+        size_t base_buffer_size
+)
+        : m_file_reader(std::move(reader_interface)) {
     if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_base_buffer_size = base_buffer_size;
     m_buffer.resize(m_base_buffer_size);
 
-    // TODO: anyway to get rid of this?
-    if (0 != m_file_reader.get_pos()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    m_file_pos = 0;
+    m_file_pos = m_file_reader->get_pos();
     m_buffer_begin_pos = 0;
-    m_buffer_reader.emplace(m_buffer.data(), 0);
+    m_buffer_reader = make_unique<BufferReader>(m_buffer.data(), 0);
     m_highest_read_pos = 0;
 }
 
@@ -133,12 +140,12 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         if (false == m_checkpoint_pos.has_value()) {
             // If checkpoint is not set, simply move the file_pos and invalidate
             // the buffer reader
-            if (auto const error_code = m_file_reader.try_seek_from_begin(pos);
+            if (auto const error_code = m_file_reader->try_seek_from_begin(pos);
                 error_code != ErrorCode_Success)
             {
                 return error_code;
             }
-            m_buffer_reader.emplace(m_buffer.data(), 0);
+            m_buffer_reader = make_unique<BufferReader>(m_buffer.data(), 0);
             m_buffer_begin_pos = pos;
         } else {
             auto const num_bytes_to_refill = pos - get_buffer_end_pos();
@@ -170,31 +177,28 @@ auto BufferedFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& n
         return ErrorCode_Success;
     }
 
+    span dst_view{buf, num_bytes_to_read};
     num_bytes_read = 0;
-    while (true) {
+    while (false == dst_view.empty()) {
         size_t bytes_read{0};
-        auto error_code = m_buffer_reader->try_read(buf, num_bytes_to_read, bytes_read);
+        auto error_code = m_buffer_reader->try_read(dst_view.data(), dst_view.size(), bytes_read);
         if (ErrorCode_Success == error_code) {
-            buf += bytes_read;
+            dst_view = dst_view.subspan(bytes_read);
             num_bytes_read += bytes_read;
-            num_bytes_to_read -= bytes_read;
             update_file_pos(m_file_pos + bytes_read);
-            if (0 == num_bytes_to_read) {
+        } else if (ErrorCode_EndOfFile == error_code) {
+            error_code = refill_reader_buffer(m_base_buffer_size);
+            if (ErrorCode_EndOfFile == error_code) {
                 break;
             }
-        } else if (ErrorCode_EndOfFile != error_code) {
-            return error_code;
-        }
-
-        error_code = refill_reader_buffer(m_base_buffer_size);
-        if (ErrorCode_EndOfFile == error_code) {
-            break;
-        }
-        if (ErrorCode_Success != error_code) {
+            if (ErrorCode_Success != error_code) {
+                return error_code;
+            }
+        } else {
             return error_code;
         }
     }
-    if (0 == num_bytes_read) {
+    if (dst_view.size() == num_bytes_to_read) {
         return ErrorCode_EndOfFile;
     }
     return ErrorCode_Success;
@@ -275,7 +279,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 
     size_t num_bytes_read{0};
     auto error_code = read_into_buffer(
-            m_file_reader,
+            m_file_reader.get(),
             &m_buffer[next_buffer_pos],
             num_bytes_to_read,
             num_bytes_read
@@ -284,7 +288,11 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
         return error_code;
     }
     // NOTE: We still want to set the buffer reader if no bytes were read on EOF
-    m_buffer_reader.emplace(m_buffer.data(), next_buffer_pos + num_bytes_read, next_buffer_pos);
+    m_buffer_reader = make_unique<BufferReader>(
+            m_buffer.data(),
+            next_buffer_pos + num_bytes_read,
+            next_buffer_pos
+    );
     m_buffer_begin_pos = next_buffer_begin_pos;
     return error_code;
 }
@@ -298,7 +306,7 @@ auto BufferedFileReader::drop_content_before_current_pos() -> void {
     m_buffer.resize(new_buffer_size);
     m_buffer_begin_pos += buffer_reader_pos;
 
-    m_buffer_reader.emplace(m_buffer.data(), new_data_size);
+    m_buffer_reader = make_unique<BufferReader>(m_buffer.data(), new_data_size);
 }
 
 auto BufferedFileReader::update_file_pos(size_t pos) -> void {

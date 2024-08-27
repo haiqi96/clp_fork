@@ -1,23 +1,24 @@
 #ifndef CLP_BUFFEREDFILEREADER_HPP
 #define CLP_BUFFEREDFILEREADER_HPP
 
-#include <cstdio>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "BufferReader.hpp"
-#include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
 /**
- * Class for performing buffered (in memory) reads from an on-disk file with control over when and
- * how much data is buffered. This allows us to support use cases where we want to perform unordered
- * reads from files which only support sequential access (e.g. files from block storage like S3).
+ * Class for performing buffered (in memory) reads from another ReaderInterface with control over
+ * when and how much data is buffered. This allows us to support use cases where we want to perform
+ * unordered reads from input which only support sequential access (e.g. files from block storage
+ * like S3).
  *
  * To control how much data is buffered, we allow callers to set a checkpoint such that all reads
  * and seeks past the checkpoint will be buffered until the checkpoint is cleared. This allows
@@ -25,13 +26,10 @@ namespace clp {
  * When no checkpoint is set, we maintain a fixed-size buffer.
  *
  * NOTE 1: Unless otherwise noted, the "file position" mentioned in docstrings is the position in
- * the buffered file, not the position in the on-disk file.
+ * the buffered file, not the position in the original input file.
  *
  * NOTE 2: This class restricts the buffer size to a multiple of the page size and we avoid reading
  * anything less than a page to avoid multiple page faults.
- *
- * NOTE 3: Although the FILE stream interface provided by glibc also performs buffered reads, it
- * does not allow us to control the buffering.
  */
 class BufferedFileReader : public ReaderInterface {
 public:
@@ -73,10 +71,16 @@ public:
      * @param base_buffer_size The size for the fixed-size buffer used when no checkpoint is set. It
      * must be a multiple of BufferedFileReader::cMinBufferSize.
      */
-    explicit BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size);
+    explicit BufferedFileReader(
+            std::unique_ptr<ReaderInterface> reader_interface,
+            size_t base_buffer_size
+    );
 
-    BufferedFileReader(ReaderInterface& reader_interface)
-            : BufferedFileReader(reader_interface, cDefaultBufferSize) {}
+    BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
+            : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
+
+    // Destructor
+    ~BufferedFileReader() override = default;
 
     // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
@@ -224,14 +228,12 @@ private:
 
     // Variables
     size_t m_file_pos{0};
-
-    // ReaderInterfaceSpecific
-    ReaderInterface& m_file_reader;
+    std::unique_ptr<ReaderInterface> m_file_reader;
 
     // Buffer specific data
     std::vector<char> m_buffer;
     size_t m_base_buffer_size;
-    std::optional<BufferReader> m_buffer_reader;
+    std::unique_ptr<BufferReader> m_buffer_reader;
     size_t m_buffer_begin_pos{0};
 
     // Variables for checkpoint support

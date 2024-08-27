@@ -1,20 +1,22 @@
 #include "AwsAuthenticationSigner.hpp"
 
 #include <chrono>
-#include <regex>
-#include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
+#include <boost/regex.hpp>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../ErrorCode.hpp"
 #include "../hash_utils.hpp"
 #include "../type_utils.hpp"
 #include "constants.hpp"
 
-using clp::size_checked_pointer_cast;
-using std::span;
+using clp::string_utils::is_alphabet;
+using clp::string_utils::is_decimal_digit;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -22,62 +24,88 @@ using std::vector;
 namespace clp::aws {
 namespace {
 /**
- * Gets the timestamp string specified by AWS Signature Version 4 format
+ * @param c
+ * @return Whether `c` is an unreserved character AWS Signature Version 4 protocol specifies.
+ */
+[[nodiscard]] auto is_unreserved_characters(char c) -> bool;
+
+/**
+ * Gets the formatted timestamp string specified by AWS Signature Version 4 format.
  * @param timestamp
- * @return The timestamp string
+ * @return The formatted timestamp string.
  */
-[[nodiscard]] auto get_timestamp_string(std::chrono::system_clock::time_point const& timestamp
-) -> string {
-    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
-}
+[[nodiscard]] auto get_formatted_timestamp_string(
+        std::chrono::system_clock::time_point const& timestamp
+) -> string;
 
 /**
- * Gets the date string specified by AWS Signature Version 4 format
+ * Gets the formatted date string specified by AWS Signature Version 4 format.
  * @param timestamp
- * @return The date string
+ * @return The formatted date string.
  */
-[[nodiscard]] auto get_date_string(std::chrono::system_clock::time_point const& timestamp
-) -> string {
-    return fmt::format("{:%Y%m%d}", timestamp);
-}
+[[nodiscard]] auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp
+) -> string;
 
 /**
- * Converts an HttpMethod to a string
- * @param method HTTP method
- * @return The converted string
- */
-[[nodiscard]] auto get_method_string(AwsAuthenticationSigner::HttpMethod method) -> string {
-    switch (method) {
-        case AwsAuthenticationSigner::HttpMethod::GET:
-            return "GET";
-        case AwsAuthenticationSigner::HttpMethod::PUT:
-            return "PUT";
-        case AwsAuthenticationSigner::HttpMethod::POST:
-            return "POST";
-        case AwsAuthenticationSigner::HttpMethod::DELETE:
-            return "DELETE";
-        default:
-            throw std::runtime_error("Invalid HTTP method");
-    }
-}
-
-/**
- * Gets the string to sign specified by AWS Signature Version 4 format.
+ * Gets the string to sign required by AWS Signature Version 4 protocol.
  * @param scope
- * @param timestamp_string
+ * @param timestamp
  * @param canonical_request
- * @param string_to_sign Returns the string to sign
- * @return ErrorCode_Success on success
+ * @param string_to_sign Outputs the string to sign.
+ * @return ErrorCode_Success on success.
  * @return Same as `get_sha256_hash` on failure.
  */
 [[nodiscard]] auto get_string_to_sign(
         string_view scope,
-        string_view timestamp_string,
+        string_view timestamp,
+        string_view canonical_request,
+        string& string_to_sign
+) -> ErrorCode;
+
+/**
+ * Encodes the Canonical URI as specified by AWS Signature Version 4's UriEncode.
+ * This method encodes the forward slash character, '/', everywhere except in the object key.
+ * @param uri
+ * @param is_object_key
+ * @return The encoded URI.
+ */
+[[nodiscard]] auto encode_uri(string_view uri, bool is_object_key) -> string;
+
+/**
+ * @param date
+ * @param region
+ * @return The formatted scope required by ASW Signature Version 4 protocol.
+ */
+[[nodiscard]] auto get_scope(string_view date, string_view region) -> string;
+
+/**
+ * @param url
+ * @param query_string
+ * @return Formatted canonical request string.
+ */
+[[nodiscard]] auto get_canonical_request(S3Url const& url, string_view query_string) -> string;
+
+auto is_unreserved_characters(char c) -> bool {
+    return is_alphabet(c) || is_decimal_digit(c) || c == '-' || c == '_' || c == '.' || c == '~';
+}
+
+auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp
+) -> string {
+    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
+}
+
+auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp) -> string {
+    return fmt::format("{:%Y%m%d}", timestamp);
+}
+
+auto get_string_to_sign(
+        string_view scope,
+        string_view timestamp,
         string_view canonical_request,
         string& string_to_sign
 ) -> ErrorCode {
     vector<unsigned char> signed_canonical_request;
-    if (auto error_code = get_sha256_hash(
+    if (auto const error_code = get_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(canonical_request.data()),
                  canonical_request.size()},
                 signed_canonical_request
@@ -92,26 +120,18 @@ namespace {
     string_to_sign = fmt::format(
             "{}\n{}\n{}\n{}",
             cAws4HmacSha256,
-            timestamp_string,
+            timestamp,
             scope,
             signed_canonical_request_str
     );
     return ErrorCode_Success;
 }
 
-/**
- * Encodes the Uri as specified by AWS Signature Version 4's UriEncode()
- * @param Uri
- * @param encode_slash
- * @return The encoded Uri
- */
-[[nodiscard]] auto encode_uri(string_view uri, bool encode_slash) -> string {
+auto encode_uri(string_view uri, bool is_object_key) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if ((std::isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~') {
-            encoded_uri += c;
-        } else if (c == '/' && false == encode_slash) {
+        if (is_unreserved_characters(c) || ('/' == c) && is_object_key) {
             encoded_uri += c;
         } else {
             encoded_uri += fmt::format("%{:02X}", c);
@@ -121,28 +141,16 @@ namespace {
     return encoded_uri;
 }
 
-/**
- * Gets the scope specified by AWS Signature Version 4 format
- * @param date_string
- * @param region
- * @return The scope as a string
- */
-[[nodiscard]] auto get_scope(string_view date_string, string_view region) -> string {
-    return fmt::format("{}/{}/{}/{}", date_string, region, cS3Service, cAws4Request);
+auto get_scope(string_view date, string_view region) -> string {
+    return fmt::format("{}/{}/{}/{}", date, region, cS3Service, cAws4Request);
 }
 
-/**
- * Gets the canonical request string
- * @param method HTTP method
- * @param url S3 Url
- * @param query_string Query string
- * @return Canonical request
- */
-[[nodiscard]] auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
+auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
+    auto const uri_to_encode = fmt::format("/{}", url.get_key());
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
-            get_method_string(AwsAuthenticationSigner::HttpMethod::GET),
-            encode_uri(url.get_path(), false),
+            AwsAuthenticationSigner::cHttpGetMethod,
+            encode_uri(uri_to_encode, true),
             query_string,
             cDefaultSignedHeaders,
             url.get_host(),
@@ -153,24 +161,24 @@ namespace {
 }  // namespace
 
 S3Url::S3Url(string const& url) {
-    // Virtual-hosted-style HTTP URL format
-    std::regex const host_style_url_regex(
-            R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)"
-    );
-    // Path-style HTTP URL format
-    std::regex const path_style_url_regex(
-            R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)"
-    );
+    // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
+    boost::regex const host_style_url_regex{
+            R"(https://(?<bucket>[a-z0-9.-]+)\.s3(\.(?<region>[a-z0-9-]+))?)"
+            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<key>[^?]+).*)"
+    };
+    // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
+    boost::regex const path_style_url_regex{
+            R"(https://s3(\.(?<region>[a-z0-9-]+))?)"
+            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
+    };
 
-    std::smatch match;
-    if (std::regex_match(url, match, host_style_url_regex)) {
-        m_bucket = match[1].str();
-        m_region = match[3].str();
-        m_path = match[4].str();
-    } else if (std::regex_match(url, match, path_style_url_regex)) {
-        m_region = match[2].str();
-        m_bucket = match[3].str();
-        m_path = match[4].str();
+    if (boost::smatch match; boost::regex_match(url, match, host_style_url_regex)
+                             || boost::regex_match(url, match, path_style_url_regex))
+    {
+        m_region = match["region"];
+        m_bucket = match["bucket"];
+        m_key = match["key"];
+        m_end_point = match["endpoint"];
     } else {
         throw OperationFailed(
                 ErrorCode_BadParam,
@@ -180,10 +188,19 @@ S3Url::S3Url(string const& url) {
         );
     }
 
+    if (cAwsEndpoint != m_end_point) {
+        throw OperationFailed(
+                ErrorCode_BadParam,
+                __FILENAME__,
+                __LINE__,
+                "Invalid S3 endpoint: " + m_end_point
+        );
+    }
+
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
 auto AwsAuthenticationSigner::generate_presigned_url(
@@ -193,24 +210,24 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto const s3_region = s3_url.get_region();
 
     auto const now = std::chrono::system_clock::now();
-    auto const date_string = get_date_string(now);
-    auto const timestamp_string = get_timestamp_string(now);
+    auto const timestamp = get_formatted_timestamp_string(now);
+    auto const date = get_formatted_date_string(now);
 
-    auto const scope = get_scope(date_string, s3_region);
-    auto const canonical_query_string = generate_canonical_query_string(scope, timestamp_string);
+    auto const scope = get_scope(date, s3_region);
+    auto const canonical_query_string = get_canonical_query_string(scope, timestamp);
 
     auto const canonical_request = get_canonical_request(s3_url, canonical_query_string);
 
-    string string_to_sign{};
-    if (auto error_code
-        = get_string_to_sign(scope, timestamp_string, canonical_request, string_to_sign);
+    string string_to_sign;
+    if (auto const error_code
+        = get_string_to_sign(scope, timestamp, canonical_request, string_to_sign);
         ErrorCode_Success != error_code)
     {
         return error_code;
     }
 
-    vector<unsigned char> signature{};
-    if (auto error_code = get_signature(s3_region, date_string, string_to_sign, signature);
+    vector<unsigned char> signature;
+    if (auto const error_code = get_signature(s3_region, date, string_to_sign, signature);
         ErrorCode_Success != error_code)
     {
         return error_code;
@@ -218,9 +235,9 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto const signature_str = convert_to_hex_string({signature.data(), signature.size()});
 
     presigned_url = fmt::format(
-            "https://{}{}?{}&{}={}",
+            "https://{}/{}?{}&{}={}",
             s3_url.get_host(),
-            s3_url.get_path(),
+            s3_url.get_key(),
             canonical_query_string,
             cXAmzSignature,
             signature_str
@@ -228,47 +245,36 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     return ErrorCode_Success;
 }
 
-auto AwsAuthenticationSigner::get_signature(
-        string_view region,
-        string_view date_string,
-        string_view string_to_sign,
-        vector<unsigned char>& signature
-) const -> ErrorCode {
-    vector<unsigned char> signing_key{};
-    if (auto error_code = get_signing_key(region, date_string, signing_key);
-        ErrorCode_Success != error_code)
-    {
-        return error_code;
-    }
-
-    if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(string_to_sign.data()),
-                 string_to_sign.size()},
-                {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
-                 signing_key.size()},
-                signature
-        );
-        ErrorCode_Success != error_code)
-    {
-        return error_code;
-    }
-    return ErrorCode_Success;
+auto AwsAuthenticationSigner::get_canonical_query_string(
+        string_view scope,
+        string_view timestamp
+) const -> string {
+    auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
+    return fmt::format(
+            "{}={}&{}={}&{}={}&{}={}&{}={}",
+            cXAmzAlgorithm,
+            cAws4HmacSha256,
+            cXAmzCredential,
+            encode_uri(uri, false),
+            cXAmzDate,
+            timestamp,
+            cXAmzExpires,
+            cDefaultExpireTime.count(),
+            cXAmzSignedHeaders,
+            cDefaultSignedHeaders
+    );
 }
 
 auto AwsAuthenticationSigner::get_signing_key(
         string_view region,
-        string_view date_string,
+        string_view date,
         vector<unsigned char>& signing_key
 ) const -> ErrorCode {
-    string key{cAws4};
-    key += m_secret_access_key;
+    auto const key = fmt::format("{}{}", cAws4, m_secret_access_key);
 
-    vector<unsigned char> date_key{};
-    vector<unsigned char> date_region_key{};
-    vector<unsigned char> date_region_service_key{};
-    if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(date_string.data()),
-                 date_string.size()},
+    vector<unsigned char> date_key;
+    if (auto const error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(date.data()), date.size()},
                 {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
                 date_key
         );
@@ -277,7 +283,8 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    vector<unsigned char> date_region_key;
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
                 date_region_key
@@ -287,7 +294,8 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    vector<unsigned char> date_region_service_key;
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(cS3Service.data()),
                  cS3Service.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
@@ -299,7 +307,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(cAws4Request.data()),
                  cAws4Request.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),
@@ -314,24 +322,30 @@ auto AwsAuthenticationSigner::get_signing_key(
     return ErrorCode_Success;
 }
 
-auto AwsAuthenticationSigner::generate_canonical_query_string(
-        string_view scope,
-        string_view timestamp_string
-) const -> string {
-    string uri{m_access_key_id + "/"};
-    uri += scope;
-    return fmt::format(
-            "{}={}&{}={}&{}={}&{}={}&{}={}",
-            cXAmzAlgorithm,
-            cAws4HmacSha256,
-            cXAmzCredential,
-            encode_uri(uri, true),
-            cXAmzDate,
-            timestamp_string,
-            cXAmzExpires,
-            cDefaultExpireTime,
-            cXAmzSignedHeaders,
-            cDefaultSignedHeaders
-    );
+auto AwsAuthenticationSigner::get_signature(
+        string_view region,
+        string_view date,
+        string_view string_to_sign,
+        vector<unsigned char>& signature
+) const -> ErrorCode {
+    vector<unsigned char> signing_key;
+    if (auto const error_code = get_signing_key(region, date, signing_key);
+        ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+
+    if (auto const error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(string_to_sign.data()),
+                 string_to_sign.size()},
+                {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
+                 signing_key.size()},
+                signature
+        );
+        ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+    return ErrorCode_Success;
 }
 }  // namespace clp::aws

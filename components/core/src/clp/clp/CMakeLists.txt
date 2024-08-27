@@ -18,6 +18,8 @@ set(
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
+        ../dictionary_utils.cpp
+        ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../DictionaryWriter.hpp
@@ -185,7 +187,7 @@ target_compile_features(clp PRIVATE cxx_std_20)
 target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clp
         PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
         ${CURL_LIBRARIES}
         fmt::fmt
         log_surgeon::log_surgeon

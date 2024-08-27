@@ -23,7 +23,7 @@ using std::vector;
 
 namespace clp::clp {
 [[nodiscard]] auto get_compression_path(S3Url const& s3_url) -> string {
-    return fmt::format("/{}/{}{}", s3_url.get_region(), s3_url.get_bucket(), s3_url.get_path());
+    return fmt::format("/{}/{}/{}", s3_url.get_region(), s3_url.get_bucket(), s3_url.get_key());
 }
 
 int run(int argc, char const* argv[]) {
