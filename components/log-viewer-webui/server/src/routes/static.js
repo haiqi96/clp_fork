@@ -25,6 +25,13 @@ const routes = async (fastify, options) => {
     await fastify.register(fastifyStatic, {
         prefix: "/streams",
         root: streamFilesDir,
+        setHeaders: (res, filepath) => {
+            if (filepath.endsWith('.jsonl.zst')) {
+                // Always set Content-Encoding to zstd
+                res.setHeader('Content-Encoding', 'zstd');
+                res.setHeader('Content-Type', 'application/octet-stream');
+            }
+        },
     });
 
     let logViewerDir = settings.LogViewerDir;
