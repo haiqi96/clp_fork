@@ -1,16 +1,37 @@
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config
+from clp_py_utils.clp_config import S3Config, S3Credentials
 from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
+
+
+def get_temporary_credentials(
+    duration_seconds: int = 1800
+) -> S3Credentials:
+    sts_client = boto3.client(
+        'sts'
+    )
+
+    # Extract temporary credentials
+    response = sts_client.get_session_token(
+        DurationSeconds=duration_seconds
+    )
+    credentials = response['Credentials']
+
+    # TODO: Should we handle expiration?
+    return S3Credentials (
+        access_key_id=credentials['AccessKeyId'],
+        secret_access_key=credentials['SecretAccessKey'],
+        session_token=credentials['SessionToken'],
+    )
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
@@ -79,6 +100,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
         region_name=s3_input_config.region_code,
         aws_access_key_id=s3_input_config.credentials.access_key_id,
         aws_secret_access_key=s3_input_config.credentials.secret_access_key,
+        aws_session_token=s3_input_config.credentials.session_token,
     )
 
     file_metadata_list: List[FileMetadata] = list()
@@ -131,6 +153,7 @@ def s3_put(
         region_name=s3_config.region_code,
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
+        aws_session_token=s3_config.credentials.session_token,
         config=config,
     )
 

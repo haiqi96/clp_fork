@@ -20,7 +20,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import s3_get_object_metadata
+from clp_py_utils.s3_utils import s3_get_object_metadata, get_temporary_credentials
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -163,6 +163,27 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
 
+        input_config = clp_io_config.input
+        input_type = input_config.type
+
+        # TODO: think if there's a way to refactor this into S3 branch.
+        # Will require some changes to PathsToCompressBuffer
+        if InputType.S3.value == input_type and None == input_config.credentials:
+            try:
+                clp_io_config.input.credentials = get_temporary_credentials()
+            except Exception as err:
+                logger.exception("Failed to generate short term credentials")
+                update_compression_job_metadata(
+                    db_cursor,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"S3 Failure: {err}",
+                    },
+                )
+                db_conn.commit()
+                continue
+
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
             empty_directories_allowed=True,
@@ -171,11 +192,9 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        input_config = clp_io_config.input
-        input_type = input_config.type
-        if input_type == InputType.FS.value:
+        if InputType.FS.value == input_type:
             _process_fs_input_paths(input_config, paths_to_compress_buffer)
-        elif input_type == InputType.S3.value:
+        elif InputType.S3.value == input_type:
             try:
                 _process_s3_input(input_config, paths_to_compress_buffer)
             except Exception as err:

@@ -313,6 +313,7 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
+    session_token: Optional[str]
 
     @validator("access_key_id")
     def validate_access_key_id(cls, field):
@@ -332,7 +333,7 @@ class S3Config(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: S3Credentials
+    credentials: Optional[S3Credentials]
 
     @validator("region_code")
     def validate_region_code(cls, field):

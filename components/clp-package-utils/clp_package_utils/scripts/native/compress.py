@@ -144,14 +144,19 @@ def _generate_clp_io_config(
 
         s3_url = logs_to_compress[0]
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
+        s3_credentials = None
+        if parsed_args.aws_access_key_id and parsed_args.aws_secret_access_key:
+            s3_credentials = S3Credentials(
+                access_key_id=parsed_args.aws_access_key_id,
+                secret_access_key=parsed_args.aws_secret_access_key,
+                session_token=parsed_args.aws_session_token,
+            )
+
         return S3InputConfig(
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,
-            credentials=S3Credentials(
-                access_key_id=parsed_args.aws_access_key_id,
-                secret_access_key=parsed_args.aws_secret_access_key,
-            ),
+            credentials=s3_credentials,
             timestamp_key=parsed_args.timestamp_key,
         )
     else:
@@ -219,6 +224,9 @@ def main(argv):
     )
     s3_compressor_parser.add_argument(
         "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
+    )
+    s3_compressor_parser.add_argument(
+        "--aws-session-token", type=str, default=None, help="AWS session token."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

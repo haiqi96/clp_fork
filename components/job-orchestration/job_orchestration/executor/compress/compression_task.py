@@ -162,7 +162,7 @@ def make_clp_s_command_and_env(
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -185,11 +185,19 @@ def make_clp_s_command_and_env(
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
+        if None is clp_config.input.credentials:
+            logger.error("Input credentials not supplied")
+            return None, None
+
         compression_env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": clp_config.input.credentials.access_key_id,
             "AWS_SECRET_ACCESS_KEY": clp_config.input.credentials.secret_access_key,
         }
+        aws_session_token = clp_config.input.credentials.session_token
+        if aws_session_token is not None:
+            compression_env_vars["AWS_SESSION_TOKEN"] = aws_session_token
+
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:
@@ -275,6 +283,11 @@ def run_clp(
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+
+    if compression_cmd is None:
+        error_msg = "Error creating compression command"
+        logger.error(error_msg)
+        return False, {"error_message": error_msg}
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
