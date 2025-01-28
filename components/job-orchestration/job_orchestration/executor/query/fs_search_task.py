@@ -71,7 +71,30 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+        archive_credentials = s3_config.credentials
+        if archive_credentials is None:
+            archive_temporary_credentials = search_config.temp_archives_credentials
+            if archive_temporary_credentials is None:
+                logger.error(f"Cannot locate temporary credentials for archive")
+                return None, None
+            archive_credentials = archive_temporary_credentials
+
+        if s3_config.credentials is not None:
+            aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+            env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": aws_access_key_id,
+                "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+            }
+        else:
+            temporary_credentials = search_config.temporary_credentials
+            env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": temporary_credentials.access_key_id,
+                "AWS_SECRET_ACCESS_KEY": temporary_credentials.secret_access_key,
+                "AWS_SESSION_TOKEN": temporary_credentials.aws_session_token
+            }
+
         env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": aws_access_key_id,

@@ -263,6 +263,15 @@ def run_clp(
             return False, {"error_message": error_msg}
 
         s3_config = worker_config.archive_output.storage.s3_config
+        if s3_config.credentials is None:
+            logger.debug("Try getting temporary credentials from OutputConfig")
+            temp_credentials = clp_config.output.temp_credentials
+            if temp_credentials is None:
+                error_msg = f"Cannot locate temporary S3 credentials."
+                logger.error(error_msg)
+                return False, {"error_message": error_msg}
+            s3_config.credentials = temp_credentials
+
         enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:

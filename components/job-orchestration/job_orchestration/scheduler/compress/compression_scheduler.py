@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
-    COMPRESSION_TASKS_TABLE_NAME,
+    COMPRESSION_TASKS_TABLE_NAME, StorageType,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
@@ -146,7 +146,7 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
+def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config, archive_storage_config):
     """
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
@@ -172,7 +172,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             try:
                 clp_io_config.input.credentials = get_temporary_credentials()
             except Exception as err:
-                logger.exception("Failed to generate short term credentials")
+                logger.exception("Failed to generate short term credentials for ingestion")
                 update_compression_job_metadata(
                     db_cursor,
                     job_id,
@@ -183,6 +183,23 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 )
                 db_conn.commit()
                 continue
+
+        if StorageType.S3 == archive_storage_config.type:
+            if archive_storage_config.credentials is None:
+                try:
+                    clp_io_config.output.temp_credentials = get_temporary_credentials()
+                except Exception as err:
+                    logger.exception("Failed to generate short term credentials for compression")
+                    update_compression_job_metadata(
+                        db_cursor,
+                        job_id,
+                        {
+                            "status": CompressionJobStatus.FAILED,
+                            "status_msg": f"S3 Failure: {err}",
+                        },
+                    )
+                    db_conn.commit()
+                    continue
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -410,6 +427,7 @@ def main(argv):
                     db_conn,
                     db_cursor,
                     sql_adapter.database_config.get_clp_connection_params_and_type(True),
+                    clp_config.archive_output.storage,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)

@@ -45,6 +45,8 @@ class OutputConfig(BaseModel):
     target_segment_size: int
     target_encoded_file_size: int
 
+    temp_credentials: typing.Optional[S3Credentials]
+
 
 class ClpIoConfig(BaseModel):
     input: typing.Union[FsInputConfig, S3InputConfig]
@@ -59,17 +61,22 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryJobConfig(BaseModel): ...
+class QueryJobConfig(BaseModel):
+    temp_archives_credentials: typing.Optional[S3Credentials]
 
 
-class ExtractIrJobConfig(QueryJobConfig):
+class ExtractJobConfig(QueryJobConfig):
+    temp_stream_credentials: typing.Optional[S3Credentials]
+
+
+class ExtractIrJobConfig(ExtractJobConfig):
     orig_file_id: str
     msg_ix: int
     file_split_id: typing.Optional[str] = None
     target_uncompressed_size: typing.Optional[int] = None
 
 
-class ExtractJsonJobConfig(QueryJobConfig):
+class ExtractJsonJobConfig(ExtractJobConfig):
     archive_id: str
     target_chunk_size: typing.Optional[int] = None
 
