@@ -92,7 +92,7 @@ def _make_core_clp_s_command_and_env_vars(
                 **os.environ,
                 "AWS_ACCESS_KEY_ID": temporary_credentials.access_key_id,
                 "AWS_SECRET_ACCESS_KEY": temporary_credentials.secret_access_key,
-                "AWS_SESSION_TOKEN": temporary_credentials.aws_session_token
+                "AWS_SESSION_TOKEN": temporary_credentials.aws_session_token,
             }
 
         env_vars = {

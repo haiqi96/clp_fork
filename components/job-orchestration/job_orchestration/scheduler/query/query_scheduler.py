@@ -34,13 +34,15 @@ from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     QUERY_JOBS_TABLE_NAME,
-    QUERY_TASKS_TABLE_NAME, StorageType, S3Config,
+    QUERY_TASKS_TABLE_NAME,
+    S3Config,
+    StorageType,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
-from clp_py_utils.sql_adapter import SQL_Adapter
 from clp_py_utils.s3_utils import get_temporary_credentials
+from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
@@ -105,7 +107,9 @@ class StreamExtractionHandle(ABC):
 
 
 class IrExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn, stream_s3_config: Optional[S3Config]):
+    def __init__(
+        self, job_id: str, job_config: Dict[str, Any], db_conn, stream_s3_config: Optional[S3Config]
+    ):
         super().__init__(job_id)
         self.__job_config = ExtractIrJobConfig.parse_obj(job_config)
         self._archive_id, self.__file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
@@ -153,7 +157,9 @@ class IrExtractionHandle(StreamExtractionHandle):
 
 
 class JsonExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn, stream_s3_config: Optional[S3Config]):
+    def __init__(
+        self, job_id: str, job_config: Dict[str, Any], db_conn, stream_s3_config: Optional[S3Config]
+    ):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
         self._archive_id = self.__job_config.archive_id
@@ -639,16 +645,18 @@ def handle_pending_query_jobs(
                 if archive_s3_config.credentials is None:
                     archive_temp_credentials = get_temporary_credentials()
                     if archive_temp_credentials is None:
-                        logger.error(f"Failed to get temporary archive credentials, abort job {job_id}.")
+                        logger.error(
+                            f"Failed to get temporary archive credentials, abort job {job_id}."
+                        )
                         if not set_job_or_task_status(
-                                db_conn,
-                                QUERY_JOBS_TABLE_NAME,
-                                job_id,
-                                QueryJobStatus.FAILED,
-                                QueryJobStatus.PENDING,
-                                start_time=datetime.datetime.now(),
-                                num_tasks=0,
-                                duration=0,
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.FAILED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            num_tasks=0,
+                            duration=0,
                         ):
                             logger.error(f"Failed to set job {job_id} as failed")
                         continue
@@ -699,9 +707,13 @@ def handle_pending_query_jobs(
                 job_handle: StreamExtractionHandle
                 try:
                     if QueryJobType.EXTRACT_IR == job_type:
-                        job_handle = IrExtractionHandle(job_id, job_config, db_conn, stream_s3_config)
+                        job_handle = IrExtractionHandle(
+                            job_id, job_config, db_conn, stream_s3_config
+                        )
                     else:
-                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn, stream_s3_config)
+                        job_handle = JsonExtractionHandle(
+                            job_id, job_config, db_conn, stream_s3_config
+                        )
                 except ValueError:
                     logger.exception("Failed to initialize extraction job handle")
                     if not set_job_or_task_status(

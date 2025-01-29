@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
@@ -13,24 +13,18 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_temporary_credentials(
-    duration_seconds: int = 1800
-) -> S3Credentials:
-    sts_client = boto3.client(
-        'sts'
-    )
+def get_temporary_credentials(duration_seconds: int = 1800) -> S3Credentials:
+    sts_client = boto3.client("sts")
 
     # Extract temporary credentials
-    response = sts_client.get_session_token(
-        DurationSeconds=duration_seconds
-    )
-    credentials = response['Credentials']
+    response = sts_client.get_session_token(DurationSeconds=duration_seconds)
+    credentials = response["Credentials"]
 
     # TODO: Should we handle expiration?
-    return S3Credentials (
-        access_key_id=credentials['AccessKeyId'],
-        secret_access_key=credentials['SecretAccessKey'],
-        session_token=credentials['SessionToken'],
+    return S3Credentials(
+        access_key_id=credentials["AccessKeyId"],
+        secret_access_key=credentials["SecretAccessKey"],
+        session_token=credentials["SessionToken"],
     )
 
 

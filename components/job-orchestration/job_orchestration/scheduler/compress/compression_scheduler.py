@@ -15,12 +15,13 @@ from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
-    COMPRESSION_TASKS_TABLE_NAME, StorageType,
+    COMPRESSION_TASKS_TABLE_NAME,
+    StorageType,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import s3_get_object_metadata, get_temporary_credentials
+from clp_py_utils.s3_utils import get_temporary_credentials, s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -146,7 +147,9 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config, archive_storage_config):
+def search_and_schedule_new_tasks(
+    db_conn, db_cursor, clp_metadata_db_connection_config, archive_storage_config
+):
     """
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
