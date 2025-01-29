@@ -496,7 +496,7 @@ def validate_results_cache_config(
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_config()
-    clp_config.validate_stream_output_dir()
+    clp_config.validate_stream_output_config()
 
 
 def validate_webui_config(

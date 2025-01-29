@@ -584,22 +584,31 @@ class CLPConfig(BaseModel):
             raise ValueError(f"input_logs_directory '{input_logs_dir}' is not a directory.")
 
     def validate_archive_output_config(self):
-        if (
-            StorageType.S3 == self.archive_output.storage.type
-            and StorageEngine.CLP_S != self.package.storage_engine
-        ):
-            raise ValueError(
-                f"archive_output.storage.type = 's3' is only supported with package.storage_engine"
-                f" = '{StorageEngine.CLP_S}'"
-            )
+        archive_output: ArchiveOutput = self.archive_output
+        if StorageType.S3 == archive_output.storage.type:
+            if StorageEngine.CLP_S != self.package.storage_engine:
+                raise ValueError(
+                    f"archive_output.storage.type = 's3' is only supported with"
+                    f" package.storage_engine = '{StorageEngine.CLP_S}'"
+                )
+            s3_credentials = archive_output.storage.s3_config.credentials
+            if s3_credentials is not None and s3_credentials.session_token is not None:
+                raise ValueError(f"session token is not supported in clp config")
+
         try:
             validate_path_could_be_dir(self.archive_output.get_directory())
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_dir(self):
+    def validate_stream_output_config(self):
+        stream_output: StreamOutput = self.stream_output
+        if StorageType.S3 == stream_output.storage.type:
+            s3_credentials = stream_output.storage.s3_config.credentials
+            if s3_credentials is not None and s3_credentials.session_token is not None:
+                raise ValueError(f"session token is not supported in clp config")
+
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory())
+            validate_path_could_be_dir(stream_output.get_directory())
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
