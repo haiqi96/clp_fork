@@ -34,13 +34,13 @@ from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     QUERY_JOBS_TABLE_NAME,
-    QUERY_TASKS_TABLE_NAME, StorageType, ArchiveS3Storage, StreamS3Storage, S3Config,
+    QUERY_TASKS_TABLE_NAME, StorageType, S3Config,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
-from components.core.build.test import get_temporary_credentials
+from clp_py_utils.s3_utils import get_temporary_credentials
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus

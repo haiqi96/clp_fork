@@ -185,7 +185,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 continue
 
         if StorageType.S3 == archive_storage_config.type:
-            if archive_storage_config.credentials is None:
+            if archive_storage_config.s3_config.credentials is None:
                 try:
                     clp_io_config.output.temp_credentials = get_temporary_credentials()
                 except Exception as err:
