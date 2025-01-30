@@ -16,7 +16,7 @@ from job_orchestration.executor.query.utils import (
     run_query_task,
 )
 from job_orchestration.executor.utils import load_worker_config
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, ExtractJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
 # Setup logging
@@ -101,12 +101,27 @@ def _make_clp_s_command_and_env_vars(
             "s3",
         ))
         # fmt: on
-        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
-        env_vars = {
-            **os.environ,
-            "AWS_ACCESS_KEY_ID": aws_access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
-        }
+
+        env_vars: Optional[Dict[str, str]]
+        if s3_config.credentials is not None:
+            aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+            env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": aws_access_key_id,
+                "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+            }
+        else:
+            temporary_credentials = extract_json_config.temp_archives_credentials
+            if temporary_credentials is None:
+                logger.error(f"Cannot locate temporary credentials for archive")
+                return None, None
+            env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": temporary_credentials.access_key_id,
+                "AWS_SECRET_ACCESS_KEY": temporary_credentials.secret_access_key,
+                "AWS_SESSION_TOKEN": temporary_credentials.session_token,
+            }
+
     else:
         # fmt: off
         command.extend((
@@ -212,6 +227,16 @@ def extract_stream(
     if StorageType.S3 == storage_config.type:
         s3_config = storage_config.s3_config
         enable_s3_upload = True
+        if s3_config.credentials is None:
+            extract_job_config: ExtractJobConfig = ExtractJobConfig.parse_obj(job_config)
+            s3_config.credentials = extract_job_config.temp_stream_credentials
+            if s3_config.credentials is None:
+                logger.error(f"Failed to get credentials")
+                return report_task_failure(
+                    sql_adapter=sql_adapter,
+                    task_id=task_id,
+                    start_time=start_time,
+                )
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,

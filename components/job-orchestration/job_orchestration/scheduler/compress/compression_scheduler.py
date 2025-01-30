@@ -21,7 +21,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import get_temporary_credentials, s3_get_object_metadata
+from clp_py_utils.s3_utils import get_frozen_credentials, s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -173,7 +173,7 @@ def search_and_schedule_new_tasks(
         # Will require some changes to PathsToCompressBuffer
         if InputType.S3.value == input_type and None == input_config.credentials:
             try:
-                clp_io_config.input.credentials = get_temporary_credentials()
+                clp_io_config.input.credentials = get_frozen_credentials()
             except Exception as err:
                 logger.exception("Failed to generate short term credentials for ingestion")
                 update_compression_job_metadata(
@@ -190,7 +190,7 @@ def search_and_schedule_new_tasks(
         if StorageType.S3 == archive_storage_config.type:
             if archive_storage_config.s3_config.credentials is None:
                 try:
-                    clp_io_config.output.temp_credentials = get_temporary_credentials()
+                    clp_io_config.output.temp_credentials = get_frozen_credentials()
                 except Exception as err:
                     logger.exception("Failed to generate short term credentials for compression")
                     update_compression_job_metadata(

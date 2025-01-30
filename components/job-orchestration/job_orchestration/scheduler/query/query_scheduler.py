@@ -41,7 +41,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
-from clp_py_utils.s3_utils import get_temporary_credentials
+from clp_py_utils.s3_utils import get_frozen_credentials
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
@@ -122,10 +122,10 @@ class IrExtractionHandle(StreamExtractionHandle):
 
         if stream_s3_config is not None:
             if stream_s3_config.credentials is None:
-                temp_stream_credentials = get_temporary_credentials()
+                temp_stream_credentials = get_frozen_credentials()
                 if temp_stream_credentials is None:
                     raise ValueError(f"Failed to get temporary stream credentials")
-                self.__job_config.temp_stream_credentials = get_temporary_credentials()
+                self.__job_config.temp_stream_credentials = get_frozen_credentials()
 
     def get_stream_id(self) -> str:
         return self.__file_split_id
@@ -168,10 +168,10 @@ class JsonExtractionHandle(StreamExtractionHandle):
 
         if stream_s3_config is not None:
             if stream_s3_config.credentials is None:
-                temp_stream_credentials = get_temporary_credentials()
+                temp_stream_credentials = get_frozen_credentials()
                 if temp_stream_credentials is None:
                     raise ValueError(f"Failed to get temporary stream credentials")
-                self.__job_config.temp_stream_credentials = get_temporary_credentials()
+                self.__job_config.temp_stream_credentials = get_frozen_credentials()
 
     def get_stream_id(self) -> str:
         return self._archive_id
@@ -643,7 +643,7 @@ def handle_pending_query_jobs(
             if archive_s3_config is not None:
                 # add archive credentials
                 if archive_s3_config.credentials is None:
-                    archive_temp_credentials = get_temporary_credentials()
+                    archive_temp_credentials = get_frozen_credentials()
                     if archive_temp_credentials is None:
                         logger.error(
                             f"Failed to get temporary archive credentials, abort job {job_id}."
@@ -660,7 +660,7 @@ def handle_pending_query_jobs(
                         ):
                             logger.error(f"Failed to set job {job_id} as failed")
                         continue
-                    job_config.temp_credentials = archive_temp_credentials
+                    job_config["temp_archives_credentials"] = archive_temp_credentials
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER

@@ -13,6 +13,7 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
+# TODO: not used for now
 def get_temporary_credentials(duration_seconds: int = 1800) -> S3Credentials:
     sts_client = boto3.client("sts")
 
@@ -25,6 +26,20 @@ def get_temporary_credentials(duration_seconds: int = 1800) -> S3Credentials:
         access_key_id=credentials["AccessKeyId"],
         secret_access_key=credentials["SecretAccessKey"],
         session_token=credentials["SessionToken"],
+    )
+
+
+def get_frozen_credentials() -> Optional[S3Credentials]:
+    session = boto3.Session()
+    credentials = session.get_credentials()
+    if credentials is None:
+        return None
+
+    frozen_credentials = credentials.get_frozen_credentials()
+    return S3Credentials(
+        access_key_id=frozen_credentials.access_key,
+        secret_access_key=frozen_credentials.secret_key,
+        session_token=frozen_credentials.token,
     )
 
 
