@@ -153,21 +153,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             );
             return false;
         }
-
-        mongocxx::client client;
-        mongocxx::collection collection;
-
-        try {
-            auto const mongo_uri{mongocxx::uri(command_line_args.get_ir_mongodb_uri())};
-            client = mongocxx::client{mongo_uri};
-            collection
-                    = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
-        } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("Failed to connect to results cache - {}", e.what());
-            return false;
-        }
-
-        std::vector<bsoncxx::document::value> results;
         auto ir_output_handler = [&](std::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
@@ -190,36 +175,15 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 );
                 return false;
             }
-            results.emplace_back(
-                    std::move(
-                            bsoncxx::builder::basic::make_document(
-                                    bsoncxx::builder::basic::kvp(
-                                            clp::clo::cResultsCacheKeys::IrOutput::Path,
-                                            dest_ir_file_name
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
-                                            orig_file_id
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
-                                            static_cast<int64_t>(begin_message_ix)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
-                                            static_cast<int64_t>(end_message_ix)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
-                                            is_last_chunk
-                                    )
-                            )
-                    )
-            );
 
             if (command_line_args.print_ir_stats()) {
                 nlohmann::json json_msg;
-                json_msg["path"] = dest_ir_path;
+                json_msg[clp::clo::cResultsCacheKeys::IrOutput::Path] = dest_ir_path;
+                json_msg[clp::clo::cResultsCacheKeys::IrOutput::StreamId] = orig_file_id;
+                json_msg[clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx] = begin_message_ix;
+                json_msg[clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx] = end_message_ix;
+                json_msg[clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk] = is_last_chunk;
+
                 std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                           << std::endl;
             }
@@ -238,17 +202,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             ))
         {
             return false;
-        }
-
-        // Write the metadata into the results cache
-        if (false == results.empty()) {
-            try {
-                collection.insert_many(results);
-            } catch (mongocxx::exception const& e) {
-                SPDLOG_ERROR("Failed to insert results into results cache - {}", e.what());
-                return false;
-            }
-            results.clear();
         }
 
         file_metadata_ix_ptr.reset(nullptr);

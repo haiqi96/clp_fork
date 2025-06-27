@@ -2,8 +2,9 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Final, List, Optional, Tuple
 
+import pymongo
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
@@ -32,19 +33,23 @@ from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 # Setup logging
 logger = get_task_logger(__name__)
 
+# Constant
+STREAM_STAT_BEGIN_MSG_IX: Final[str] = "begin_msg_ix"
+STREAM_STAT_END_MSG_IX: Final[str] = "end_msg_ix"
+STREAM_STAT_IS_LAST_CHUNK: Final[str] = "is_last_chunk"
+STREAM_STAT_PATH: Final[str] = "path"
+STREAM_STAT_STREAM_ID: Final[str] = "stream_id"
+
 
 def _make_clp_command_and_env_vars(
     clp_home: Path,
     worker_config: WorkerConfig,
     archive_id: str,
     job_config: dict,
-    results_cache_uri: str,
-    print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     storage_type = worker_config.archive_output.storage.type
     archives_dir = worker_config.archive_output.get_directory()
     stream_output_dir = worker_config.stream_output.get_directory()
-    stream_collection_name = worker_config.stream_collection_name
 
     if StorageType.S3 == storage_type:
         logger.error(
@@ -64,14 +69,11 @@ def _make_clp_command_and_env_vars(
         str(archives_dir / archive_id),
         extract_ir_config.file_split_id,
         str(stream_output_dir),
-        results_cache_uri,
-        stream_collection_name,
+        "--print-ir-stats",
     ]
     if extract_ir_config.target_uncompressed_size is not None:
         command.append("--target-size")
         command.append(str(extract_ir_config.target_uncompressed_size))
-    if print_stream_stats:
-        command.append("--print-ir-stats")
     return command, None
 
 
@@ -80,8 +82,6 @@ def _make_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     job_config: dict,
-    results_cache_uri: str,
-    print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     storage_type = worker_config.archive_output.storage.type
     stream_output_dir = worker_config.stream_output.get_directory()
@@ -130,18 +130,13 @@ def _make_clp_s_command_and_env_vars(
     # fmt: off
     command.extend((
         "--ordered",
-        "--mongodb-uri",
-        results_cache_uri,
-        "--mongodb-collection",
-        stream_collection_name,
+        "--print-ordered-chunk-stats"
     ))
     # fmt: on
 
     if extract_json_config.target_chunk_size is not None:
         command.append("--target-ordered-chunk-size")
         command.append(str(extract_json_config.target_chunk_size))
-    if print_stream_stats:
-        command.append("--print-ordered-chunk-stats")
     return command, env_vars
 
 
@@ -150,8 +145,6 @@ def _make_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     job_config: dict,
-    results_cache_uri: str,
-    print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     storage_engine = worker_config.package.storage_engine
     if StorageEngine.CLP == storage_engine:
@@ -160,8 +153,6 @@ def _make_command_and_env_vars(
             worker_config,
             archive_id,
             job_config,
-            results_cache_uri,
-            print_stream_stats,
         )
     elif StorageEngine.CLP_S == storage_engine:
         command, env_vars = _make_clp_s_command_and_env_vars(
@@ -169,13 +160,45 @@ def _make_command_and_env_vars(
             worker_config,
             archive_id,
             job_config,
-            results_cache_uri,
-            print_stream_stats,
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None, None
     return command, env_vars
+
+
+def _validate_stream_stats(stream_stats: Dict[str, Any]) -> bool:
+    required_stream_stat_names = [
+        STREAM_STAT_BEGIN_MSG_IX,
+        STREAM_STAT_END_MSG_IX,
+        STREAM_STAT_IS_LAST_CHUNK,
+        STREAM_STAT_PATH,
+        STREAM_STAT_STREAM_ID,
+    ]
+    for stat_name in required_stream_stat_names:
+        if stat_name not in stream_stats:
+            logger.error(f"Key `{stat_name}` doesn't exist in stream stats")
+            return False
+
+    return True
+
+
+def _write_stream_metadata(
+    stream_stats: Dict[str, Any], stream_relative_path: str, mongodb_uri: str, collection_name: str
+) -> bool:
+    stream_stats[STREAM_STAT_PATH] = stream_relative_path
+
+    try:
+        with pymongo.MongoClient(mongodb_uri) as results_cache_client:
+            results_cache_db = results_cache_client.get_default_database()
+            stream_collection = results_cache_db.get_collection(collection_name)
+            stream_collection.insert_one(stream_stats)
+
+    except Exception as e:
+        logger.exception(f"Unexpected exception when writing stream metadata: {e}")
+        return False
+
+    return True
 
 
 @app.task(bind=True)
@@ -215,20 +238,17 @@ def extract_stream(
     clp_home = Path(os.getenv("CLP_HOME"))
 
     # Get S3 config
-    s3_config: S3Config
-    enable_s3_upload = False
     storage_config = worker_config.stream_output.storage
-    if StorageType.S3 == storage_config.type:
-        s3_config = storage_config.s3_config
-        enable_s3_upload = True
+    s3_config: Optional[S3Config] = (
+        storage_config.s3_config if StorageType.S3 == storage_config.type else None
+    )
+    enable_s3_upload = s3_config is not None
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
         worker_config=worker_config,
         archive_id=archive_id,
         job_config=job_config,
-        results_cache_uri=results_cache_uri,
-        print_stream_stats=enable_s3_upload,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")
@@ -250,46 +270,54 @@ def extract_stream(
         start_time=start_time,
     )
 
-    if enable_s3_upload and QueryTaskStatus.SUCCEEDED == task_results.status:
-        logger.info(f"Uploading streams to S3...")
+    if QueryTaskStatus.SUCCEEDED == task_results.status:
+        logger.info(f"Handling extracted streams...")
 
-        upload_error = False
+        error_flag = False
         for line in task_stdout_str.splitlines():
             try:
                 stream_stats = json.loads(line)
             except json.decoder.JSONDecodeError:
                 logger.exception(f"`{line}` cannot be decoded as JSON")
-                upload_error = True
+                error_flag = True
                 continue
 
-            stream_path_str = stream_stats.get("path")
-            if stream_path_str is None:
-                logger.error(f"`path` is not a valid key in `{line}`")
-                upload_error = True
+            if not _validate_stream_stats(stream_stats):
+                error_flag = True
+
+            # If we've had a single error, we don't want to write stream metadata or try uploading
+            # any other streams since that may unnecessarily slow down the task and generate a lot
+            # of extraneous output.
+            if error_flag:
                 continue
 
-            stream_path = Path(stream_path_str)
-
-            # If we've had a single upload error, we don't want to try uploading any other streams
-            # since that may unnecessarily slow down the task and generate a lot of extraneous
-            # output.
-            if not upload_error:
-                stream_name = stream_path.name
+            stream_path = Path(stream_stats[STREAM_STAT_PATH])
+            stream_name = stream_path.name
+            if enable_s3_upload:
                 logger.info(f"Uploading stream {stream_name} to S3...")
-
                 try:
                     s3_put(s3_config, stream_path, stream_name)
                     logger.info(f"Finished uploading stream {stream_name} to S3.")
                 except Exception as err:
                     logger.error(f"Failed to upload stream {stream_name}: {err}")
-                    upload_error = True
+                    error_flag = True
+                    continue
 
-            stream_path.unlink()
+                stream_path.unlink()
 
-        if upload_error:
+            if not _write_stream_metadata(
+                stream_stats,
+                stream_name,
+                results_cache_uri,
+                worker_config.stream_collection_name,
+            ):
+                error_flag = True
+
+        if error_flag:
             task_results.status = QueryTaskStatus.FAILED
             task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
+            logger.info(f"streams handling failed.")
         else:
-            logger.info(f"Finished uploading streams.")
+            logger.info(f"Finished handling streams.")
 
     return task_results.dict()

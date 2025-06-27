@@ -398,20 +398,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             extraction_options.add(decompression_options);
 
-            po::options_description output_metadata_options("Output Metadata Options");
-            // clang-format off
-            output_metadata_options.add_options()(
-                    "mongodb-uri",
-                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
-                    "MongoDB URI for the database to write decompression metadata to"
-            )(
-                    "mongodb-collection",
-                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
-                    "MongoDB collection to write decompression metadata to"
-            );
-            // clang-format on
-            extraction_options.add(output_metadata_options);
-
             po::positional_options_description positional_options;
             positional_options.add("archive-path", 1);
             positional_options.add("output-dir", 1);
@@ -442,7 +428,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(decompression_options);
-                visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
@@ -467,23 +452,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             "print-ordered-chunk-stats must be used with ordered argument"
                     );
                 }
-
-                if (false == m_mongodb_uri.empty()) {
-                    throw std::invalid_argument(
-                            "Recording decompression metadata only supported for ordered"
-                            " decompression"
-                    );
-                }
             }
-
-            // We use xor to check that these arguments are either both specified or both
-            // unspecified.
-            if (m_mongodb_uri.empty() ^ m_mongodb_collection.empty()) {
-                throw std::invalid_argument(
-                        "mongodb-uri and mongodb-collection must both be non-empty"
-                );
-            }
-
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;
             std::string query;

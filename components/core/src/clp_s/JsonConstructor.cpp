@@ -80,20 +80,6 @@ void JsonConstructor::construct_in_order() {
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
-    mongocxx::client client;
-    mongocxx::collection collection;
-
-    if (m_option.metadata_db.has_value()) {
-        try {
-            auto const mongo_uri{mongocxx::uri(m_option.metadata_db->mongodb_uri)};
-            client = mongocxx::client{mongo_uri};
-            collection = client[mongo_uri.database()][m_option.metadata_db->mongodb_collection];
-        } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeBadParamDbUri, __FILE__, __LINE__, e.what());
-        }
-    }
-
-    std::vector<bsoncxx::document::value> results;
     auto finalize_chunk = [&](bool open_new_writer) {
         // Add one to last_idx to match clp's behaviour of having the end index be exclusive
         ++last_idx;
@@ -107,38 +93,16 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
         }
 
-        if (m_option.metadata_db.has_value()) {
-            results.emplace_back(
-                    std::move(
-                            bsoncxx::builder::basic::make_document(
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::decompression::cPath,
-                                            new_file_path.filename()
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::decompression::cStreamId,
-                                            std::string{m_archive_reader->get_archive_id()}
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::decompression::cBeginMsgIx,
-                                            first_idx
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::decompression::cEndMsgIx,
-                                            last_idx
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::decompression::cIsLastChunk,
-                                            false == open_new_writer
-                                    )
-                            )
-                    )
-            );
-        }
-
         if (m_option.print_ordered_chunk_stats) {
             nlohmann::json json_msg;
-            json_msg["path"] = new_file_path.string();
+            json_msg[constants::results_cache::decompression::cPath] = new_file_path.string();
+            json_msg[constants::results_cache::decompression::cStreamId]
+                    = std::string{m_archive_reader->get_archive_id()};
+            json_msg[constants::results_cache::decompression::cBeginMsgIx] = first_idx;
+            json_msg[constants::results_cache::decompression::cEndMsgIx] = last_idx;
+            json_msg[constants::results_cache::decompression::cIsLastChunk]
+                    = bool{false == open_new_writer};
+
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                       << std::endl;
         }
@@ -178,14 +142,6 @@ void JsonConstructor::construct_in_order() {
         std::filesystem::remove(src_path, ec);
         if (ec) {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
-        }
-    }
-
-    if (false == results.empty()) {
-        try {
-            collection.insert_many(results);
-        } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__, e.what());
         }
     }
 }

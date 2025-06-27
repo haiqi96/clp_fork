@@ -209,20 +209,12 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     )(
             "output-dir",
             po::value<string>(&m_ir_output_dir)
-    )(
-            "mongodb-uri",
-            po::value<string>(&m_ir_mongodb_uri)
-    )(
-            "mongodb-collection",
-            po::value<string>(&m_ir_mongodb_collection)
     );
     // clang-format on
     po::positional_options_description positional_options_description;
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("file-split-id", 1);
     positional_options_description.add("output-dir", 1);
-    positional_options_description.add("mongodb-uri", 1);
-    positional_options_description.add("mongodb-collection", 1);
 
     // Aggregate all options
     po::options_description all_options;
@@ -252,13 +244,9 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
         cerr << "Examples:" << endl;
         cerr << R"(  # Extract file (split) with ID "8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" from)"
              << endl;
-        cerr << R"(  # ARCHIVE_PATH as IR into OUTPUT_DIR from ARCHIVE_PATH, and send the metadata)"
-             << endl;
-        cerr << R"(  # to mongodb://127.0.0.1:27017/test result collection)" << endl;
+        cerr << R"(  # ARCHIVE_PATH as IR into OUTPUT_DIR from ARCHIVE_PATH)" << endl;
         cerr << "  " << get_program_name()
-             << " i ARCHIVE_PATH 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4 OUTPUT_DIR "
-                "mongodb://127.0.0.1:27017/test result"
-             << endl;
+             << " i ARCHIVE_PATH 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4 OUTPUT_DIR" << endl;
         cerr << endl;
 
         cerr << "Options can be specified on the command line or through a configuration "
@@ -281,13 +269,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
         throw invalid_argument("OUTPUT_DIR not specified or empty.");
     }
 
-    if (m_ir_mongodb_uri.empty()) {
-        throw invalid_argument("URI not specified or empty.");
-    }
-
-    if (m_ir_mongodb_collection.empty()) {
-        throw invalid_argument("COLLECTION not specified or empty.");
-    }
     return ParsingResult::Success;
 }
 
@@ -708,7 +689,6 @@ void CommandLineArguments::print_search_basic_usage() const {
 
 void CommandLineArguments::print_ir_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
-         << R"( [OPTIONS] ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR MONGODB_URI MONGODB_COLLECTION)"
-         << endl;
+         << R"( [OPTIONS] ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR)" << endl;
 }
 }  // namespace clp::clo
