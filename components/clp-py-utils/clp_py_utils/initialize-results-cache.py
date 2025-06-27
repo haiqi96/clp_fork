@@ -135,7 +135,8 @@ def main(argv):
 
             file_split_id_index = IndexModel(["file_split_id"])
             orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
-            stream_collection.create_indexes([file_split_id_index, orig_file_id_index])
+            last_access_ts_index = IndexModel(["last_access_ts"])
+            stream_collection.create_indexes([file_split_id_index, orig_file_id_index, last_access_ts_index])
     except Exception:
         logger.exception("Failed to create clp results cache indices.")
         return -1

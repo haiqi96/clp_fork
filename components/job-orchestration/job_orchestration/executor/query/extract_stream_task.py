@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any, Dict, Final, List, Optional, Tuple
 
 import pymongo
@@ -37,6 +38,7 @@ logger = get_task_logger(__name__)
 STREAM_STAT_BEGIN_MSG_IX: Final[str] = "begin_msg_ix"
 STREAM_STAT_END_MSG_IX: Final[str] = "end_msg_ix"
 STREAM_STAT_IS_LAST_CHUNK: Final[str] = "is_last_chunk"
+STREAM_STAT_LAST_ACCESS_TS: Final[str] = "last_access_ts"
 STREAM_STAT_PATH: Final[str] = "path"
 STREAM_STAT_STREAM_ID: Final[str] = "stream_id"
 
@@ -187,7 +189,7 @@ def _write_stream_metadata(
     stream_stats: Dict[str, Any], stream_relative_path: str, mongodb_uri: str, collection_name: str
 ) -> bool:
     stream_stats[STREAM_STAT_PATH] = stream_relative_path
-
+    stream_stats[STREAM_STAT_LAST_ACCESS_TS] = int(time.time())
     try:
         with pymongo.MongoClient(mongodb_uri) as results_cache_client:
             results_cache_db = results_cache_client.get_default_database()
