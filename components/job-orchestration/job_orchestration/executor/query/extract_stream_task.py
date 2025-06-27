@@ -273,22 +273,22 @@ def extract_stream(
     if QueryTaskStatus.SUCCEEDED == task_results.status:
         logger.info(f"Handling extracted streams...")
 
-        error_flag = False
+        error_encountered = False
         for line in task_stdout_str.splitlines():
             try:
                 stream_stats = json.loads(line)
             except json.decoder.JSONDecodeError:
                 logger.exception(f"`{line}` cannot be decoded as JSON")
-                error_flag = True
+                error_encountered = True
                 continue
 
             if not _validate_stream_stats(stream_stats):
-                error_flag = True
+                error_encountered = True
 
             # If we've had a single error, we don't want to write stream metadata or try uploading
             # any other streams since that may unnecessarily slow down the task and generate a lot
             # of extraneous output.
-            if error_flag:
+            if error_encountered:
                 continue
 
             stream_path = Path(stream_stats[STREAM_STAT_PATH])
@@ -300,7 +300,7 @@ def extract_stream(
                     logger.info(f"Finished uploading stream {stream_name} to S3.")
                 except Exception as err:
                     logger.error(f"Failed to upload stream {stream_name}: {err}")
-                    error_flag = True
+                    error_encountered = True
                     continue
 
                 stream_path.unlink()
@@ -311,12 +311,11 @@ def extract_stream(
                 results_cache_uri,
                 worker_config.stream_collection_name,
             ):
-                error_flag = True
+                error_encountered = True
 
-        if error_flag:
+        if error_encountered:
             task_results.status = QueryTaskStatus.FAILED
             task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
-            logger.info(f"streams handling failed.")
         else:
             logger.info(f"Finished handling streams.")
 
