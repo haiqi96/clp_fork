@@ -1,4 +1,7 @@
-import {Collection} from "mongodb";
+import {
+    Collection,
+    ObjectId,
+} from "mongodb";
 
 
 interface DbManagerOptions {
@@ -19,6 +22,7 @@ interface DbManagerOptions {
 }
 
 interface StreamFileMongoDocument {
+    _id: ObjectId;
     path: string;
     stream_id: string;
     begin_msg_ix: number;

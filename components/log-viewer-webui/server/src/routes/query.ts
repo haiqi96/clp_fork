@@ -78,6 +78,8 @@ const routes: FastifyPluginAsync = async (app) => {
                 throw new Error("Unable to extract stream with " +
                     `streamId=${streamId} at logEventIdx=${logEventIdx}`);
             }
+        } else {
+            await fastify.dbManager.updateExtractedStreamFileMetadata(streamMetadata._id);
         }
 
         if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {

@@ -23,13 +23,14 @@ import {
     QueryJob,
 } from "../typings/query.js";
 import {sleep} from "../utils/time.js";
+import {ObjectId} from "mongodb";
 
 
 /**
  * Interval in milliseconds for polling the completion status of a job.
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
-
+const SECOND_TO_MILLISECONDS = 1000;
 
 /**
  * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
@@ -167,6 +168,19 @@ class DbManager {
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
         });
+    }
+
+    /**
+     * Updates the metadata for the extracted stream with the given _id to a later last access time.
+     * TODO: add error handling
+     * @param objectId
+     */
+    async updateExtractedStreamFileMetadata (objectId: ObjectId) {
+        const currEpochSec = Math.floor(Date.now() / SECOND_TO_MILLISECONDS);
+        await this.#streamFilesCollection.updateOne(
+            {_id: objectId},
+            {$set: {last_access_ts: currEpochSec}}
+        );
     }
 
     /**
