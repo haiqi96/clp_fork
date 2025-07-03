@@ -891,6 +891,7 @@ def start_webui(
         client_settings_json_file.write(json.dumps(client_settings_json))
 
     server_settings_json_updates = {
+        "ClpStorageEngine": clp_config.package.storage_engine,
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
@@ -1058,7 +1059,7 @@ def start_retention_cleaner(
 
     retention_cleaner_required = is_retention_cleaner_required(clp_config)
     if not retention_cleaner_required:
-        logger.info(f"No retention period is configured, skipping {component_name}...")
+        logger.info(f"No retention period is configured, skipping {component_name} creation...")
         return
 
     logger.info(f"Starting {component_name}...")
@@ -1074,10 +1075,10 @@ def start_retention_cleaner(
 
     logs_dir = clp_config.logs_directory / component_name
     validate_log_directory(logs_dir, component_name)
+    # Create logs directory if necessary
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
-    # Create necessary directories
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
 
     # fmt: off
@@ -1095,7 +1096,6 @@ def start_retention_cleaner(
     necessary_env_vars = [
         f"PYTHONPATH={clp_site_packages_dir}",
         f"CLP_HOME={CONTAINER_CLP_HOME}",
-        f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.retention_cleaner.logging_level}",
     ]
@@ -1125,6 +1125,7 @@ def start_retention_cleaner(
         "-m", "job_orchestration.retention.retention_cleaner",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
     ]
+    # fmt: on
     cmd = container_start_cmd + retention_cleaner_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
