@@ -1,5 +1,6 @@
 import asyncio
 import pathlib
+from typing import Final
 
 import pymongo
 import pymongo.database
@@ -16,7 +17,7 @@ from job_orchestration.retention.utils import (
 )
 
 # Constants
-MONGODB_ID_KEY = "_id"
+MONGODB_ID_KEY: Final[str] = "_id"
 
 logger = get_logger(SEARCH_RESULTS_RETENTION_HANDLER_NAME)
 
@@ -27,8 +28,7 @@ def _get_latest_doc_timestamp(collection: pymongo.collection.Collection) -> int:
         object_id = latest_doc[MONGODB_ID_KEY]
         if isinstance(object_id, ObjectId):
             return int(object_id.generation_time.timestamp())
-        else:
-            raise ValueError(f"{object_id} is not a ObjectID")
+        raise ValueError(f"{object_id} is not a ObjectID")
 
     return 0
 
@@ -61,7 +61,7 @@ def _handle_search_results_retention(
 
 
 async def search_results_retention(
-    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
+    clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, SEARCH_RESULTS_RETENTION_HANDLER_NAME)
 

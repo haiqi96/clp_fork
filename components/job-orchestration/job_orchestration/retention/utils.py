@@ -44,8 +44,8 @@ def get_expiry_epoch_secs(retention_minutes: int) -> int:
     Returns a cutoff `expiry_epoch` based on the current timestamp and `retention_minutes`. Any
     target with a timestamp (`ts`) less than `expiry_epoch` are considered expired.
     The `expiry_epoch` is calculated as `expiry_epoch = cur_time - retention_secs`.
-    :param: retention_minutes: Retention period in minutes.
 
+    :param: retention_minutes: Retention period in minutes.
     :return: The UTC epoch of the expiry time.
     """
     return int(time.time() - retention_minutes * MIN_TO_SECONDS)
@@ -137,7 +137,7 @@ class TargetsBuffer:
     def flush(self):
         """
         Clear the in-memory buffer of targets and remove the recovery file.
-        This is intended to be called after the caller finishing processing all targets (i.e. when
+        This is intended to be called after the caller finished processing all targets (i.e. when
         recovery is no longer needed for the targets.)
         """
         self._targets.clear()
