@@ -28,14 +28,16 @@ import {
     QueryJob,
 } from "../typings/query.js";
 import {sleep} from "../utils/time.js";
-import {ObjectId} from "mongodb";
+import {
+    ObjectId,
+    UpdateResult,
+} from "mongodb";
 
 
 /**
  * Interval in milliseconds for polling the completion status of a job.
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
-const SECOND_TO_MILLISECONDS = 1000;
 
 /**
  * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
@@ -179,16 +181,36 @@ class DbManager {
     }
 
     /**
-     * Updates the metadata for the extracted stream with the given _id to a later last access time.
      * TODO: add error handling
+     *
      * @param objectId
+     * @param lastAccessEpochSecs number
+     * @return A promise of boolean
+     * @throws {Error}
      */
-    async updateExtractedStreamFileMetadata (objectId: ObjectId) {
-        const currEpochSec = Math.floor(Date.now() / SECOND_TO_MILLISECONDS);
-        await this.#streamFilesCollection.updateOne(
-            {_id: objectId},
-            {$set: {last_access_ts: currEpochSec}}
-        );
+    async updateStreamLastAccessTs (objectId: ObjectId, lastAccessEpochSecs: number)
+        : Promise<boolean> {
+        let updateOneResult: UpdateResult<StreamFileMongoDocument>;
+        try {
+            updateOneResult = await this.#streamFilesCollection.updateOne(
+                {_id: objectId},
+                {$set: {last_access_ts: lastAccessEpochSecs}}
+            );
+        } catch (e: unknown) {
+            this.#fastify.log.error(
+                `Failed to update last_access_ts for document ${objectId.toString()} - ` +
+                `${e?.toString()}`
+            );
+
+            return false;
+        }
+        if (0 === updateOneResult.modifiedCount) {
+            this.#fastify.log.error(`No document gets modified = ${objectId.toString()}`);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**

@@ -11,6 +11,12 @@ import {
 
 
 /**
+ * Constant for conversion between seconds and milliseconds.
+ */
+const SECOND_TO_MILLISECONDS = 1000;
+
+
+/**
  * Creates query routes.
  *
  * @param app
@@ -79,7 +85,17 @@ const routes: FastifyPluginAsync = async (app) => {
                     `streamId=${streamId} at logEventIdx=${logEventIdx}`);
             }
         } else {
-            await fastify.dbManager.updateExtractedStreamFileMetadata(streamMetadata._id);
+            const currEpochSec = Math.floor(Date.now() / SECOND_TO_MILLISECONDS);
+            const updateResult = await fastify.dbManager.updateStreamLastAccessTs(
+                streamMetadata._id,
+                currEpochSec
+            );
+
+            if (!updateResult) {
+                resp.code(StatusCodes.BAD_REQUEST);
+                throw new Error("Unable to update the last_access_ts for stream with " +
+                    `streamId=${streamId}`);
+            }
         }
 
         if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
